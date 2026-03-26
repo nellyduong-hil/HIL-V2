@@ -1,1584 +1,1262 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   dashboard.js — Home in Love  |  Multi-projet  |  requires auth.js
+   dashboard.js — Home in Love | Plan de Vol Client
+   Requires: auth.js
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ───────────────────────────────────────────────────────── CONFIG ── */
-const TYPE_CONFIG = {
-  'location':       { label:'Recherche Location', emoji:'🔍', color:'#1e63f0' },
-  'achat':          { label:'Recherche Achat',    emoji:'🔑', color:'#0ba592' },
-  'mise-location':  { label:'Mise en Location',   emoji:'🏠', color:'#c47a00' },
-  'vente':          { label:'Mise en Vente',       emoji:'💰', color:'#16a34a' },
-  'renovation':     { label:'Rénovation',          emoji:'🔨', color:'#7c3aed' },
-  'autre':          { label:'Autre',               emoji:'📋', color:'#8494b8' },
+/* ─────────────────────────────────────────────────────────────────────────
+   CONFIG TYPES DE PROJETS
+   ───────────────────────────────────────────────────────────────────────── */
+const PROJECT_TYPES = {
+  'location':      { label: 'Recherche Location',  color: '#1e63f0', bg: 'rgba(30,99,240,0.09)'   },
+  'achat':         { label: 'Recherche Achat',      color: '#0ba592', bg: 'rgba(11,165,146,0.09)'  },
+  'investissement':{ label: 'Achat Investissement', color: '#7c3aed', bg: 'rgba(124,58,237,0.09)'  },
+  'mise-location': { label: 'Mise en Location',     color: '#c47a00', bg: 'rgba(196,122,0,0.09)'   },
+  'vente':         { label: 'Mise en Vente',        color: '#16a34a', bg: 'rgba(22,163,74,0.09)'   },
+  'renovation':    { label: 'Rénovation',           color: '#e02424', bg: 'rgba(224,36,36,0.09)'   },
 };
 
-const MISSION_TYPES = {
-  'mission':    { label:'Mission',         color:'type-mission'    },
-  'aide':       { label:'Aide financière', color:'type-aide'       },
-  'subvention': { label:'Subvention',      color:'type-subvention' },
+/* ─────────────────────────────────────────────────────────────────────────
+   CONFIG EXPERTISES (ex-Boucliers)
+   ───────────────────────────────────────────────────────────────────────── */
+const EXPERTISES = {
+  juridique:     { label: 'Expertise Juridique',      icon: '⚖️', prix: 590, slogan: 'Vous ne signerez rien sans qu\'on ait tout lu.' },
+  technique:     { label: 'Expertise Technique',      icon: '🔧', prix: 590, slogan: 'Aucun vice caché ni travaux imposés ne passera.' },
+  financier:     { label: 'Expertise Financière',     icon: '💰', prix: 590, slogan: 'Votre offre est au bon prix, ni trop haut ni trop bas.' },
+  administratif: { label: 'Expertise Administrative', icon: '📋', prix: 590, slogan: 'Chaque dossier, chaque délai, chaque obligation maîtrisés.' },
+  autres:        { label: 'Autres Expertises',         icon: '✨', prix: 590, slogan: 'Un accompagnement sur-mesure pour chaque besoin spécifique.' },
 };
 
-/* ───────────────────────────────────────────────────────── STATE ── */
-let currentUser    = null;
-let allProjects    = [];
-let currentProjIdx = 0;
-let detailOpen     = false;
+/* ─────────────────────────────────────────────────────────────────────────
+   STATUTS DES PHASES
+   ───────────────────────────────────────────────────────────────────────── */
+const PHASE_STATUS = {
+  done:    { label: 'Terminé',       color: '#16a34a', bg: 'rgba(22,163,74,0.09)',    dot: '#16a34a' },
+  active:  { label: 'En cours',      color: '#1e63f0', bg: 'rgba(30,99,240,0.09)',    dot: '#1e63f0' },
+  late:    { label: 'En retard',     color: '#c47a00', bg: 'rgba(196,122,0,0.09)',    dot: '#c47a00' },
+  locked:  { label: 'Non sécurisé', color: '#e02424', bg: 'rgba(224,36,36,0.09)',    dot: '#e02424' },
+  pending: { label: 'À venir',       color: '#8494b8', bg: 'rgba(132,148,184,0.09)', dot: '#8494b8' },
+};
 
-/* Getter courant */
+/* ─────────────────────────────────────────────────────────────────────────
+   HELPER DATES
+   ───────────────────────────────────────────────────────────────────────── */
+function addDays(base, days) {
+  var d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+    + ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MATRICE DES PHASES (7 phases × 6 types de projets)
+   start = date de création du projet
+   ───────────────────────────────────────────────────────────────────────── */
+function buildPhases(type, start) {
+  var s = start || '2026-01-01';
+
+  var PHASES = {
+    location: [
+      {
+        id: 'P1', title: 'Définition & Audit', deadline: s, status: 'done',
+        expertises: [],
+        missions: [
+          { id:'L1-1', title:'Définition du projet', responsable:'Cabinet', statut:'done', deadline: addDays(s,0) },
+          { id:'L1-2', title:'Définition du budget', responsable:'Moi', statut:'done', deadline: addDays(s,1) },
+          { id:'L1-3', title:'Problématiques rencontrées', responsable:'Cabinet', statut:'done', deadline: addDays(s,2) },
+          { id:'L1-4', title:'Définition cahier des charges', responsable:'Cabinet', statut:'done', deadline: addDays(s,3) },
+        ]
+      },
+      {
+        id: 'P2', title: 'Ingénierie & Aides', deadline: addDays(s,7), status: 'done',
+        expertises: ['juridique','financier'],
+        missions: [
+          { id:'L2-1', title:'Vérification éligibilité aides (Visale, Loca-Pass, APL/ALS)', responsable:'Cabinet', statut:'done', deadline: addDays(s,7) },
+          { id:'L2-2', title:'Dépôt des dossiers d\'aides', responsable:'Cabinet', statut:'done', deadline: addDays(s,10) },
+        ]
+      },
+      {
+        id: 'P3', title: 'Préparation, Financement & Mise en Marché', deadline: addDays(s,7), status: 'active',
+        expertises: ['technique'],
+        missions: [
+          { id:'L3-1', title:'Préparation du dossier locataire complet (dossier facile)', responsable:'Moi', statut:'active', deadline: addDays(s,12) },
+        ]
+      },
+      {
+        id: 'P4', title: 'Opérations Terrain', deadline: addDays(s,14), status: 'pending',
+        expertises: [],
+        missions: [
+          { id:'L4-1', title:'Recherche des logements disponibles', responsable:'Cabinet', statut:'pending', deadline: addDays(s,14) },
+          { id:'L4-2', title:'Dépôt des dossiers pour demande de visites', responsable:'Cabinet', statut:'pending', deadline: addDays(s,16) },
+          { id:'L4-3', title:'Organisation des visites', responsable:'Cabinet', statut:'pending', deadline: addDays(s,18) },
+        ]
+      },
+      {
+        id: 'P5', title: 'Validation & Analyse', deadline: addDays(s,14), status: 'pending',
+        expertises: ['technique'],
+        missions: [
+          { id:'L5-1', title:'Réalisation des visites', responsable:'Moi', statut:'pending', deadline: addDays(s,21) },
+        ]
+      },
+      {
+        id: 'P6', title: 'Engagement Juridique', deadline: addDays(s,30), status: 'pending',
+        expertises: ['juridique'],
+        missions: [
+          { id:'L6-1', title:'Dossier accepté — demande finale', responsable:'Cabinet', statut:'pending', deadline: addDays(s,30) },
+          { id:'L6-2', title:'Vérification Visale/Loca-Pass', responsable:'Cabinet', statut:'pending', deadline: addDays(s,32) },
+          { id:'L6-3', title:'Vérification conformité du bail', responsable:'Cabinet', statut:'pending', deadline: addDays(s,35) },
+        ]
+      },
+      {
+        id: 'P7', title: 'Closing & Remise des clés', deadline: addDays(s,60), status: 'pending',
+        expertises: ['administratif'],
+        missions: [
+          { id:'L7-1', title:'Demande CAF', responsable:'Moi', statut:'pending', deadline: addDays(s,60) },
+          { id:'L7-2', title:'Signature du bail', responsable:'Cabinet', statut:'pending', deadline: addDays(s,62) },
+          { id:'L7-3', title:'État des lieux d\'entrée', responsable:'Cabinet', statut:'pending', deadline: addDays(s,65) },
+        ]
+      },
+    ],
+
+    achat: [
+      {
+        id: 'P1', title: 'Définition & Audit', deadline: s, status: 'done',
+        expertises: [],
+        missions: [
+          { id:'A1-1', title:'Définition du projet', responsable:'Cabinet', statut:'done', deadline: addDays(s,0) },
+          { id:'A1-2', title:'Définition des besoins et problématiques rencontrées', responsable:'Cabinet', statut:'done', deadline: addDays(s,1) },
+          { id:'A1-3', title:'Définition du budget', responsable:'Moi', statut:'done', deadline: addDays(s,2) },
+          { id:'A1-4', title:'Définition cahier des charges', responsable:'Cabinet', statut:'done', deadline: addDays(s,3) },
+        ]
+      },
+      {
+        id: 'P2', title: 'Ingénierie & Aides', deadline: addDays(s,7), status: 'done',
+        expertises: ['financier','juridique'],
+        missions: [
+          { id:'A2-1', title:'Capacité d\'emprunt', responsable:'Cabinet', statut:'done', deadline: addDays(s,7) },
+          { id:'A2-2', title:'Vérification éligibilité aides (PTZ, Action Logement, TVA réduite)', responsable:'Cabinet', statut:'done', deadline: addDays(s,8) },
+          { id:'A2-3', title:'Dépôt des dossiers d\'aides', responsable:'Cabinet', statut:'done', deadline: addDays(s,10) },
+        ]
+      },
+      {
+        id: 'P3', title: 'Préparation, Financement & Mise en Marché', deadline: addDays(s,7), status: 'active',
+        expertises: ['technique'],
+        missions: [
+          { id:'A3-1', title:'Simulation et accord de principe bancaire', responsable:'Prestataire', statut:'active', deadline: addDays(s,12) },
+          { id:'A3-2', title:'Intégration des aides dans le plan de financement', responsable:'Cabinet', statut:'active', deadline: addDays(s,14) },
+        ]
+      },
+      {
+        id: 'P4', title: 'Opérations Terrain', deadline: addDays(s,14), status: 'pending',
+        expertises: [],
+        missions: [
+          { id:'A4-1', title:'Recherche des biens', responsable:'Cabinet', statut:'pending', deadline: addDays(s,14) },
+          { id:'A4-2', title:'Demande d\'informations complémentaires', responsable:'Cabinet', statut:'pending', deadline: addDays(s,16) },
+          { id:'A4-3', title:'Sélection et organisation des visites', responsable:'Cabinet', statut:'pending', deadline: addDays(s,18) },
+        ]
+      },
+      {
+        id: 'P5', title: 'Validation & Analyse', deadline: addDays(s,14), status: 'pending',
+        expertises: ['technique'],
+        missions: [
+          { id:'A5-1', title:'Réalisation des visites', responsable:'Moi', statut:'pending', deadline: addDays(s,21) },
+        ]
+      },
+      {
+        id: 'P6', title: 'Engagement Juridique', deadline: addDays(s,30), status: 'pending',
+        expertises: ['juridique','financier'],
+        missions: [
+          { id:'A6-1', title:'Analyse de la valeur marché', responsable:'Cabinet', statut:'pending', deadline: addDays(s,30) },
+          { id:'A6-2', title:'Négociation du prix', responsable:'Cabinet', statut:'pending', deadline: addDays(s,32) },
+          { id:'A6-3', title:'Offre d\'achat', responsable:'Cabinet', statut:'pending', deadline: addDays(s,33) },
+          { id:'A6-4', title:'Signature du Compromis', responsable:'Cabinet', statut:'pending', deadline: addDays(s,35) },
+          { id:'A6-5', title:'Obtention du financement', responsable:'Prestataire', statut:'pending', deadline: addDays(s,40) },
+        ]
+      },
+      {
+        id: 'P7', title: 'Closing & Remise des clés', deadline: addDays(s,60), status: 'pending',
+        expertises: ['administratif'],
+        missions: [
+          { id:'A7-1', title:'Signature de l\'acte authentique', responsable:'Cabinet', statut:'pending', deadline: addDays(s,60) },
+          { id:'A7-2', title:'Remise des clés', responsable:'Cabinet', statut:'pending', deadline: addDays(s,62) },
+        ]
+      },
+    ],
+
+    investissement: [
+      {
+        id: 'P1', title: 'Définition & Audit', deadline: s, status: 'done',
+        expertises: [],
+        missions: [
+          { id:'I1-1', title:'Définition du projet', responsable:'Cabinet', statut:'done', deadline: addDays(s,0) },
+          { id:'I1-2', title:'Définition des besoins et problématiques', responsable:'Cabinet', statut:'done', deadline: addDays(s,1) },
+          { id:'I1-3', title:'Définition du budget', responsable:'Moi', statut:'done', deadline: addDays(s,2) },
+          { id:'I1-4', title:'Cahier des charges investisseur', responsable:'Cabinet', statut:'done', deadline: addDays(s,3) },
+        ]
+      },
+      {
+        id: 'P2', title: 'Ingénierie & Aides', deadline: addDays(s,7), status: 'active',
+        expertises: ['financier','juridique'],
+        missions: [
+          { id:'I2-1', title:'Définition de la stratégie (Rendement vs Patrimonial)', responsable:'Cabinet', statut:'done', deadline: addDays(s,5) },
+          { id:'I2-2', title:'Zone géographique cible', responsable:'Cabinet', statut:'done', deadline: addDays(s,6) },
+          { id:'I2-3', title:'Type de bien (Studio, Coloc, Immeuble de rapport)', responsable:'Moi', statut:'active', deadline: addDays(s,7) },
+          { id:'I2-4', title:'Analyse de la fiscalité (LMNP Réel, SCI, Pinel/Denormandie)', responsable:'Cabinet', statut:'pending', deadline: addDays(s,8) },
+          { id:'I2-5', title:'Vérification éligibilité aides (Loc\'Avantages, ANAH)', responsable:'Cabinet', statut:'pending', deadline: addDays(s,10) },
+        ]
+      },
+      {
+        id: 'P3', title: 'Préparation, Financement & Mise en Marché', deadline: addDays(s,7), status: 'locked',
+        expertises: ['financier','technique'],
+        missions: [
+          { id:'I3-1', title:'Capacité d\'emprunt investisseur', responsable:'Cabinet', statut:'pending', deadline: addDays(s,12) },
+          { id:'I3-2', title:'Simulation de rentabilité brute/nette/nette-nette', responsable:'Cabinet', statut:'pending', deadline: addDays(s,13) },
+          { id:'I3-3', title:'Montage du dossier bancaire "Investisseur"', responsable:'Prestataire', statut:'pending', deadline: addDays(s,14) },
+        ]
+      },
+      {
+        id: 'P4', title: 'Opérations Terrain', deadline: addDays(s,14), status: 'pending',
+        expertises: [],
+        missions: [
+          { id:'I4-1', title:'Chasse immobilière (Focus Market & Off-Market)', responsable:'Cabinet', statut:'pending', deadline: addDays(s,14) },
+          { id:'I4-2', title:'Analyse des annonces selon le prix au €m² et la tension locative', responsable:'Cabinet', statut:'pending', deadline: addDays(s,16) },
+        ]
+      },
+      {
+        id: 'P5', title: 'Validation & Analyse', deadline: addDays(s,14), status: 'pending',
+        expertises: ['technique'],
+        missions: [
+          { id:'I5-1', title:'Visites avec focus technique', responsable:'Cabinet', statut:'pending', deadline: addDays(s,21) },
+          { id:'I5-2', title:'Audit des travaux nécessaires pour la mise en location', responsable:'Cabinet', statut:'pending', deadline: addDays(s,22) },
+          { id:'I5-3', title:'Estimation du futur loyer', responsable:'Cabinet', statut:'pending', deadline: addDays(s,23) },
+        ]
+      },
+      {
+        id: 'P6', title: 'Engagement Juridique', deadline: addDays(s,30), status: 'pending',
+        expertises: ['juridique','financier'],
+        missions: [
+          { id:'I6-1', title:'Analyse des PV de copropriété (travaux à venir)', responsable:'Cabinet', statut:'pending', deadline: addDays(s,30) },
+          { id:'I6-2', title:'Offre d\'achat et négociation', responsable:'Cabinet', statut:'pending', deadline: addDays(s,32) },
+          { id:'I6-3', title:'Signature du compromis', responsable:'Cabinet', statut:'pending', deadline: addDays(s,35) },
+        ]
+      },
+      {
+        id: 'P7', title: 'Closing & Remise des clés', deadline: addDays(s,60), status: 'pending',
+        expertises: ['administratif'],
+        missions: [
+          { id:'I7-1', title:'Obtention définitive du prêt', responsable:'Prestataire', statut:'pending', deadline: addDays(s,58) },
+          { id:'I7-2', title:'Signature de l\'acte authentique', responsable:'Cabinet', statut:'pending', deadline: addDays(s,60) },
+          { id:'I7-3', title:'Mise en place du Carnet d\'Information (CIL)', responsable:'Cabinet', statut:'pending', deadline: addDays(s,62) },
+          { id:'I7-4', title:'Remise des clés', responsable:'Cabinet', statut:'pending', deadline: addDays(s,63) },
+        ]
+      },
+    ],
+
+    'mise-location': [
+      {
+        id: 'P1', title: 'Définition & Audit', deadline: s, status: 'done',
+        expertises: [],
+        missions: [
+          { id:'ML1-1', title:'Définition des besoins', responsable:'Cabinet', statut:'done', deadline: addDays(s,0) },
+          { id:'ML1-2', title:'Estimation Loyer Prix du marché', responsable:'Cabinet', statut:'done', deadline: addDays(s,1) },
+          { id:'ML1-3', title:'Problématique rencontrée', responsable:'Cabinet', statut:'done', deadline: addDays(s,2) },
+          { id:'ML1-4', title:'Définition cahier des charges', responsable:'Cabinet', statut:'done', deadline: addDays(s,3) },
+        ]
+      },
+      {
+        id: 'P2', title: 'Ingénierie & Aides', deadline: addDays(s,7), status: 'done',
+        expertises: ['financier','juridique','administratif'],
+        missions: [
+          { id:'ML2-1', title:'Estimation Précis du loyer (Encadrement, augmentation loyer, la loi)', responsable:'Cabinet', statut:'done', deadline: addDays(s,7) },
+          { id:'ML2-2', title:'Vérification éligibilité aides (Loc\'Avantages, ANAH)', responsable:'Cabinet', statut:'done', deadline: addDays(s,8) },
+        ]
+      },
+      {
+        id: 'P3', title: 'Préparation, Financement & Mise en Marché', deadline: addDays(s,7), status: 'active',
+        expertises: ['technique'],
+        missions: [
+          { id:'ML3-1', title:'Préparation et mise en valeur du bien', responsable:'Cabinet', statut:'done', deadline: addDays(s,10) },
+          { id:'ML3-2', title:'Réalisation des diagnostics (DPE, etc.)', responsable:'Prestataire', statut:'active', deadline: addDays(s,12) },
+          { id:'ML3-3', title:'Rédaction de l\'annonce et photos', responsable:'Cabinet', statut:'pending', deadline: addDays(s,14) },
+          { id:'ML3-4', title:'Publication de l\'annonce', responsable:'Cabinet', statut:'pending', deadline: addDays(s,15) },
+        ]
+      },
+      {
+        id: 'P4', title: 'Opérations Terrain', deadline: addDays(s,14), status: 'pending',
+        expertises: [],
+        missions: [
+          { id:'ML4-1', title:'Sélection des candidats', responsable:'Cabinet', statut:'pending', deadline: addDays(s,21) },
+          { id:'ML4-2', title:'Organisation des visites', responsable:'Cabinet', statut:'pending', deadline: addDays(s,22) },
+        ]
+      },
+      {
+        id: 'P5', title: 'Validation & Analyse', deadline: addDays(s,14), status: 'pending',
+        expertises: ['technique'],
+        missions: [
+          { id:'ML5-1', title:'Réalisation des visites', responsable:'Cabinet', statut:'pending', deadline: addDays(s,28) },
+        ]
+      },
+      {
+        id: 'P6', title: 'Engagement Juridique', deadline: addDays(s,30), status: 'pending',
+        expertises: ['juridique'],
+        missions: [
+          { id:'ML6-1', title:'Étude approfondie des dossiers', responsable:'Cabinet', statut:'pending', deadline: addDays(s,35) },
+          { id:'ML6-2', title:'Rédaction du bail conforme', responsable:'Cabinet', statut:'pending', deadline: addDays(s,37) },
+        ]
+      },
+      {
+        id: 'P7', title: 'Closing & Remise des clés', deadline: addDays(s,60), status: 'pending',
+        expertises: ['administratif'],
+        missions: [
+          { id:'ML7-1', title:'État des lieux d\'entrée', responsable:'Cabinet', statut:'pending', deadline: addDays(s,60) },
+          { id:'ML7-2', title:'Remise des clés', responsable:'Cabinet', statut:'pending', deadline: addDays(s,62) },
+        ]
+      },
+    ],
+
+    vente: [
+      {
+        id: 'P1', title: 'Définition & Audit', deadline: s, status: 'done',
+        expertises: [],
+        missions: [
+          { id:'V1-1', title:'Définition des besoins', responsable:'Cabinet', statut:'done', deadline: addDays(s,0) },
+          { id:'V1-2', title:'Estimation Prix du marché', responsable:'Cabinet', statut:'done', deadline: addDays(s,1) },
+          { id:'V1-3', title:'Problématique rencontrée', responsable:'Cabinet', statut:'done', deadline: addDays(s,2) },
+          { id:'V1-4', title:'Définition cahier des charges', responsable:'Cabinet', statut:'done', deadline: addDays(s,3) },
+        ]
+      },
+      {
+        id: 'P2', title: 'Ingénierie & Aides', deadline: addDays(s,7), status: 'done',
+        expertises: ['financier','juridique'],
+        missions: [
+          { id:'V2-1', title:'Estimation plus précise du bien', responsable:'Cabinet', statut:'done', deadline: addDays(s,7) },
+          { id:'V2-2', title:'Vérification éligibilité aides (Exonération plus-value, abattements)', responsable:'Cabinet', statut:'done', deadline: addDays(s,8) },
+        ]
+      },
+      {
+        id: 'P3', title: 'Préparation, Financement & Mise en Marché', deadline: addDays(s,7), status: 'active',
+        expertises: ['technique'],
+        missions: [
+          { id:'V3-1', title:'Préparation et mise en valeur du bien', responsable:'Cabinet', statut:'done', deadline: addDays(s,10) },
+          { id:'V3-2', title:'Réalisation des diagnostics obligatoires', responsable:'Prestataire', statut:'active', deadline: addDays(s,12) },
+          { id:'V3-3', title:'Rédaction de l\'annonce et photos', responsable:'Cabinet', statut:'pending', deadline: addDays(s,14) },
+          { id:'V3-4', title:'Publication', responsable:'Cabinet', statut:'pending', deadline: addDays(s,15) },
+        ]
+      },
+      {
+        id: 'P4', title: 'Opérations Terrain', deadline: addDays(s,14), status: 'pending',
+        expertises: [],
+        missions: [
+          { id:'V4-1', title:'Gestion des appels', responsable:'Cabinet', statut:'pending', deadline: addDays(s,18) },
+          { id:'V4-2', title:'Validation du financement avant visite', responsable:'Cabinet', statut:'pending', deadline: addDays(s,19) },
+          { id:'V4-3', title:'Éviter la prospection commerciale et les curieux', responsable:'Cabinet', statut:'pending', deadline: addDays(s,20) },
+        ]
+      },
+      {
+        id: 'P5', title: 'Validation & Analyse', deadline: addDays(s,14), status: 'pending',
+        expertises: ['technique'],
+        missions: [
+          { id:'V5-1', title:'Réalisation des visites', responsable:'Cabinet', statut:'pending', deadline: addDays(s,25) },
+        ]
+      },
+      {
+        id: 'P6', title: 'Engagement Juridique', deadline: addDays(s,30), status: 'pending',
+        expertises: ['juridique','financier'],
+        missions: [
+          { id:'V6-1', title:'Réception et analyse des offres', responsable:'Cabinet', statut:'pending', deadline: addDays(s,35) },
+          { id:'V6-2', title:'Acceptation d\'offre', responsable:'Moi', statut:'pending', deadline: addDays(s,36) },
+          { id:'V6-3', title:'Signature du compromis', responsable:'Cabinet', statut:'pending', deadline: addDays(s,38) },
+          { id:'V6-4', title:'Suivi rétractation', responsable:'Cabinet', statut:'pending', deadline: addDays(s,48) },
+        ]
+      },
+      {
+        id: 'P7', title: 'Closing & Remise des clés', deadline: addDays(s,60), status: 'pending',
+        expertises: ['administratif'],
+        missions: [
+          { id:'V7-1', title:'Signature de l\'acte authentique', responsable:'Cabinet', statut:'pending', deadline: addDays(s,60) },
+          { id:'V7-2', title:'Remise des clés', responsable:'Cabinet', statut:'pending', deadline: addDays(s,62) },
+        ]
+      },
+    ],
+
+    renovation: [
+      {
+        id: 'P1', title: 'Définition & Audit', deadline: s, status: 'done',
+        expertises: [],
+        missions: [
+          { id:'R1-1', title:'Définition du projet', responsable:'Cabinet', statut:'done', deadline: addDays(s,0) },
+          { id:'R1-2', title:'Définition des besoins', responsable:'Cabinet', statut:'done', deadline: addDays(s,1) },
+          { id:'R1-3', title:'Problématique rencontrée', responsable:'Cabinet', statut:'done', deadline: addDays(s,2) },
+          { id:'R1-4', title:'Définition cahier des charges', responsable:'Cabinet', statut:'done', deadline: addDays(s,3) },
+        ]
+      },
+      {
+        id: 'P2', title: 'Ingénierie & Aides', deadline: addDays(s,7), status: 'active',
+        expertises: ['financier','juridique','administratif'],
+        missions: [
+          { id:'R2-1', title:'Définition du projet et des travaux', responsable:'Cabinet', statut:'done', deadline: addDays(s,5) },
+          { id:'R2-2', title:'Éligibilité aides (MPR, Éco-PTZ, CEE, TVA 5.5)', responsable:'Cabinet', statut:'active', deadline: addDays(s,7) },
+          { id:'R2-3', title:'Montage des dossiers d\'aides', responsable:'Cabinet', statut:'pending', deadline: addDays(s,9) },
+          { id:'R2-4', title:'Estimation du budget au prix de marché', responsable:'Cabinet', statut:'pending', deadline: addDays(s,10) },
+        ]
+      },
+      {
+        id: 'P3', title: 'Préparation, Financement & Mise en Marché', deadline: addDays(s,7), status: 'locked',
+        expertises: ['technique'],
+        missions: [
+          { id:'R3-1', title:'Création du cahier des charges de consultation', responsable:'Cabinet', statut:'pending', deadline: addDays(s,14) },
+          { id:'R3-2', title:'Mise en concurrence artisans', responsable:'Cabinet', statut:'pending', deadline: addDays(s,16) },
+          { id:'R3-3', title:'Obtention des devis', responsable:'Prestataire', statut:'pending', deadline: addDays(s,18) },
+          { id:'R3-4', title:'Sélection prestataires', responsable:'Moi', statut:'pending', deadline: addDays(s,20) },
+        ]
+      },
+      {
+        id: 'P4', title: 'Opérations Terrain', deadline: addDays(s,14), status: 'pending',
+        expertises: [],
+        missions: [
+          { id:'R4-1', title:'Demande de permis / DP si besoin', responsable:'Cabinet', statut:'pending', deadline: addDays(s,21) },
+          { id:'R4-2', title:'Suivi du chantier, lien avec le cahier des charges', responsable:'Cabinet', statut:'pending', deadline: addDays(s,25) },
+        ]
+      },
+      {
+        id: 'P5', title: 'Validation & Analyse', deadline: addDays(s,14), status: 'pending',
+        expertises: ['technique'],
+        missions: [
+          { id:'R5-1', title:'Réception des travaux en lien avec le cahier des charges', responsable:'Cabinet', statut:'pending', deadline: addDays(s,45) },
+          { id:'R5-2', title:'Vérification conformité si besoin', responsable:'Cabinet', statut:'pending', deadline: addDays(s,47) },
+        ]
+      },
+      {
+        id: 'P6', title: 'Engagement Juridique', deadline: addDays(s,30), status: 'pending',
+        expertises: ['juridique','financier','technique'],
+        missions: [
+          { id:'R6-1', title:'Transmission justificatifs pour déblocage aides', responsable:'Moi', statut:'pending', deadline: addDays(s,50) },
+          { id:'R6-2', title:'Vérification conformité', responsable:'Cabinet', statut:'pending', deadline: addDays(s,52) },
+          { id:'R6-3', title:'Levée des réserves', responsable:'Cabinet', statut:'pending', deadline: addDays(s,54) },
+        ]
+      },
+      {
+        id: 'P7', title: 'Closing & Remise des clés', deadline: addDays(s,60), status: 'pending',
+        expertises: ['administratif'],
+        missions: [
+          { id:'R7-1', title:'Bilan final', responsable:'Cabinet', statut:'pending', deadline: addDays(s,60) },
+          { id:'R7-2', title:'Mise en place du Carnet d\'Information Logement (CIL)', responsable:'Cabinet', statut:'pending', deadline: addDays(s,62) },
+          { id:'R7-3', title:'Clôture du chantier', responsable:'Cabinet', statut:'pending', deadline: addDays(s,65) },
+        ]
+      },
+    ],
+  };
+
+  return PHASES[type] || PHASES['location'];
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DOCUMENTS PAR TYPE DE PROJET
+   ───────────────────────────────────────────────────────────────────────── */
+const DOCS_BY_TYPE = {
+  location: [
+    { section: 'Documents Personnels', docs: [
+      { id:'d1', label:'Pièce d\'identité (recto/verso)', statut:'recu' },
+      { id:'d2', label:'3 derniers bulletins de salaire', statut:'recu' },
+      { id:'d3', label:'Dernier avis d\'imposition', statut:'recu' },
+      { id:'d4', label:'3 derniers relevés bancaires', statut:'recu' },
+      { id:'d5', label:'Contrat de travail', statut:'recu' },
+      { id:'d6', label:'Justificatif de domicile actuel', statut:'recu' },
+    ]},
+    { section: 'Documents Aides', docs: [
+      { id:'d7', label:'Dossier Visale', statut:'attente' },
+      { id:'d8', label:'Dossier CAF / APL', statut:'attente' },
+    ]},
+  ],
+  achat: [
+    { section: 'Documents Personnels', docs: [
+      { id:'d1', label:'Pièce d\'identité (recto/verso)', statut:'recu' },
+      { id:'d2', label:'3 derniers bulletins de salaire', statut:'recu' },
+      { id:'d3', label:'Dernier avis d\'imposition', statut:'recu' },
+      { id:'d4', label:'3 derniers relevés bancaires', statut:'recu' },
+      { id:'d5', label:'Contrat de travail', statut:'recu' },
+      { id:'d6', label:'Justificatif de domicile actuel', statut:'recu' },
+    ]},
+    { section: 'Documents Solvabilité', docs: [
+      { id:'d7', label:'Accord de principe bancaire', statut:'recu' },
+      { id:'d8', label:'Justificatif d\'apport', statut:'recu' },
+    ]},
+    { section: 'Documents CIL / Audit Pré-achat', docs: [
+      { id:'d9',  label:'État des diagnostics (DPE, Amiante, Plomb, ERP)', statut:'recu' },
+      { id:'d10', label:'PV des 3 dernières Assemblées Générales', statut:'attente' },
+      { id:'d11', label:'Règlement de copropriété', statut:'attente' },
+      { id:'d12', label:'Taxe foncière', statut:'attente' },
+    ]},
+    { section: 'Documents Financement', docs: [
+      { id:'d13', label:'Offre de prêt définitive', statut:'attente' },
+      { id:'d14', label:'Attestation PTZ', statut:'attente' },
+    ]},
+  ],
+  investissement: [
+    { section: 'Documents Personnels', docs: [
+      { id:'d1', label:'Pièce d\'identité (recto/verso)', statut:'recu' },
+      { id:'d2', label:'3 derniers bulletins de salaire', statut:'recu' },
+      { id:'d3', label:'Dernier avis d\'imposition', statut:'recu' },
+      { id:'d4', label:'3 derniers relevés bancaires', statut:'recu' },
+    ]},
+    { section: 'Documents Solvabilité Investisseur', docs: [
+      { id:'d5', label:'Accord de principe bancaire', statut:'recu' },
+      { id:'d6', label:'Justificatif d\'apport', statut:'recu' },
+    ]},
+    { section: 'Documents CIL / Audit Pré-achat', docs: [
+      { id:'d7', label:'État des diagnostics (DPE, Amiante, Plomb, ERP)', statut:'attente' },
+      { id:'d8', label:'PV des 3 dernières Assemblées Générales', statut:'attente' },
+      { id:'d9', label:'Règlement de copropriété', statut:'attente' },
+      { id:'d10', label:'Taxe foncière', statut:'attente' },
+    ]},
+    { section: 'Spécifique Investissement', docs: [
+      { id:'d11', label:'Simulation de rentabilité Pilot Immo (P3)', statut:'attente' },
+    ]},
+  ],
+  'mise-location': [
+    { section: 'Titre de Propriété', docs: [
+      { id:'d1', label:'Acte notarié', statut:'recu' },
+    ]},
+    { section: 'CIL — Performances', docs: [
+      { id:'d2', label:'DPE de moins de 10 ans', statut:'attente' },
+      { id:'d3', label:'Audit énergétique (si passoire)', statut:'attente' },
+    ]},
+    { section: 'CIL — Plans', docs: [
+      { id:'d4', label:'Plans de coupes du logement', statut:'attente' },
+      { id:'d5', label:'Règlement de copropriété', statut:'attente' },
+      { id:'d6', label:'Taxe foncière', statut:'recu' },
+    ]},
+    { section: 'CIL — Réseaux', docs: [
+      { id:'d7', label:'Attestation de conformité électrique/gaz', statut:'attente' },
+      { id:'d8', label:'Derniers certificats d\'entretien de chaudière', statut:'attente' },
+    ]},
+    { section: 'Mandat', docs: [
+      { id:'d9', label:'Mandat de recherche ou de vente Home in Love signé', statut:'attente' },
+    ]},
+  ],
+  vente: [
+    { section: 'Titre de Propriété', docs: [
+      { id:'d1', label:'Acte notarié', statut:'recu' },
+    ]},
+    { section: 'CIL — Diagnostics', docs: [
+      { id:'d2', label:'DPE de moins de 10 ans', statut:'recu' },
+      { id:'d3', label:'Audit énergétique (si passoire)', statut:'attente' },
+      { id:'d4', label:'Attestation de conformité électrique/gaz', statut:'attente' },
+      { id:'d5', label:'Derniers certificats d\'entretien de chaudière', statut:'attente' },
+    ]},
+    { section: 'Mandat', docs: [
+      { id:'d6', label:'Mandat de vente Home in Love signé', statut:'recu' },
+    ]},
+  ],
+  renovation: [
+    { section: 'Administratif', docs: [
+      { id:'d1', label:'Récépissé de Déclaration Préalable (DP) ou Permis de Construire', statut:'attente' },
+      { id:'d2', label:'Techniques des isolants (R ou lambda) fournis par les artisans', statut:'attente' },
+    ]},
+    { section: 'CIL — Réseaux', docs: [
+      { id:'d3', label:'Schéma de modification électrique ou plomberie après travaux', statut:'attente' },
+    ]},
+    { section: 'Notices Techniques', docs: [
+      { id:'d4', label:'Notice d\'entretien PAC', statut:'attente' },
+      { id:'d5', label:'Chauffe-eau thermodynamique', statut:'attente' },
+      { id:'d6', label:'VMC', statut:'attente' },
+    ]},
+    { section: 'Financier', docs: [
+      { id:'d7', label:'Devis artisans signés', statut:'recu' },
+      { id:'d8', label:'Factures finales (indispensables pour déblocage aides en P7)', statut:'attente' },
+    ]},
+  ],
+};
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DONNÉES DÉMO — 6 PROJETS
+   ───────────────────────────────────────────────────────────────────────── */
+function buildDemoProjects() {
+  return [
+    {
+      id: 'proj_1',
+      type: 'achat',
+      titre: 'Recherche d\'un appartement 3 pièces — Bordeaux',
+      adresse: 'Bordeaux Chartrons / Caudéran — 33000',
+      objectif: 'Acheter avant fin 2026 avec un financement optimisé',
+      deadline: '2026-12-01',
+      offre: 'copilot',
+      expertisesActives: { juridique: false, technique: true, financier: true, administratif: false, autres: false },
+      phases: buildPhases('achat', '2026-01-01'),
+      documents: DOCS_BY_TYPE['achat'],
+      prestataires: [
+        { id:'p1', nom:'Home in Love', specialite:'Accompagnement immobilier', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', coutEngage:600, coutPrev:800, isHIL: true },
+        { id:'p2', nom:'Crédit Conseil', specialite:'Courtier en financement', email:'contact@creditconseil.fr', tel:'05 56 XX XX XX', coutEngage:0, coutPrev:1500, isHIL: false },
+      ],
+      messages: [
+        { id:'m1', texte:'Visite T3 rue Fondaudège — 68m², DPE C, charges 120€/mois. Prix demandé 295k. Potentiel de négo à 280k.', date:'2026-02-10T16:00:00', auteur:'Cabinet' },
+        { id:'m2', texte:'Accord de principe Crédit Agricole obtenu. Taux 3,45% sur 20 ans. Mensualité estimée : 1 580€ pour 280k.', date:'2026-01-28T10:30:00', auteur:'Cabinet' },
+      ],
+      notesPrivees: [],
+      nextMsgId: 3,
+    },
+    {
+      id: 'proj_2',
+      type: 'location',
+      titre: 'Recherche d\'un T2 meublé — Lyon Part-Dieu',
+      adresse: 'Lyon 3e / Lyon 6e — 69003, 69006',
+      objectif: 'Trouver un logement avant ma prise de poste le 1er mars 2026',
+      deadline: '2026-03-01',
+      offre: 'flash',
+      expertisesActives: { juridique: true, technique: false, financier: false, administratif: false, autres: false },
+      phases: buildPhases('location', '2026-01-15'),
+      documents: DOCS_BY_TYPE['location'],
+      prestataires: [
+        { id:'p1', nom:'Home in Love', specialite:'Accompagnement immobilier', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', coutEngage:500, coutPrev:350, isHIL: true },
+      ],
+      messages: [
+        { id:'m1', texte:'Visite appart rue Garibaldi — très lumineux, bon état général. Propriétaire réactif. À rappeler avant vendredi.', date:'2026-01-22T14:32:00', auteur:'Cabinet' },
+      ],
+      notesPrivees: [],
+      nextMsgId: 2,
+    },
+    {
+      id: 'proj_3',
+      type: 'investissement',
+      titre: 'Acquisition investissement locatif — Paris 13e',
+      adresse: 'Paris 13e / 75013',
+      objectif: 'Acquérir un studio à fort rendement locatif',
+      deadline: '2026-09-01',
+      offre: 'delegation',
+      expertisesActives: { juridique: false, technique: false, financier: false, administratif: false, autres: false },
+      phases: buildPhases('investissement', '2026-01-10'),
+      documents: DOCS_BY_TYPE['investissement'],
+      prestataires: [
+        { id:'p1', nom:'Home in Love', specialite:'Accompagnement immobilier', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', coutEngage:1200, coutPrev:2400, isHIL: true },
+      ],
+      messages: [],
+      notesPrivees: [],
+      nextMsgId: 1,
+    },
+    {
+      id: 'proj_4',
+      type: 'mise-location',
+      titre: 'Mise en location — Appartement Marseille 6e',
+      adresse: 'Marseille 6e — 13006',
+      objectif: 'Louer mon bien rapidement avec un locataire solvable',
+      deadline: '2026-04-01',
+      offre: 'copilot',
+      expertisesActives: { juridique: true, technique: false, financier: false, administratif: false, autres: false },
+      phases: buildPhases('mise-location', '2026-01-20'),
+      documents: DOCS_BY_TYPE['mise-location'],
+      prestataires: [
+        { id:'p1', nom:'Home in Love', specialite:'Accompagnement immobilier', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', coutEngage:400, coutPrev:600, isHIL: true },
+      ],
+      messages: [],
+      notesPrivees: [],
+      nextMsgId: 1,
+    },
+    {
+      id: 'proj_5',
+      type: 'vente',
+      titre: 'Mise en vente — Maison Nantes',
+      adresse: 'Nantes, 44000',
+      objectif: 'Vendre au meilleur prix avant l\'été 2026',
+      deadline: '2026-07-01',
+      offre: 'copilot',
+      expertisesActives: { juridique: false, technique: true, financier: false, administratif: false, autres: false },
+      phases: buildPhases('vente', '2026-01-05'),
+      documents: DOCS_BY_TYPE['vente'],
+      prestataires: [
+        { id:'p1', nom:'Home in Love', specialite:'Accompagnement immobilier', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', coutEngage:800, coutPrev:1200, isHIL: true },
+      ],
+      messages: [],
+      notesPrivees: [],
+      nextMsgId: 1,
+    },
+    {
+      id: 'proj_6',
+      type: 'renovation',
+      titre: 'Rénovation énergétique — Appartement Toulouse',
+      adresse: 'Toulouse, 31000',
+      objectif: 'Passer de DPE G à DPE C avec les aides MaPrimeRénov\'',
+      deadline: '2026-10-01',
+      offre: 'flash',
+      expertisesActives: { juridique: false, technique: false, financier: false, administratif: false, autres: false },
+      phases: buildPhases('renovation', '2026-01-08'),
+      documents: DOCS_BY_TYPE['renovation'],
+      prestataires: [
+        { id:'p1', nom:'Home in Love', specialite:'Accompagnement immobilier', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', coutEngage:300, coutPrev:900, isHIL: true },
+      ],
+      messages: [],
+      notesPrivees: [],
+      nextMsgId: 1,
+    },
+  ];
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   STATE
+   ───────────────────────────────────────────────────────────────────────── */
+var currentUser    = null;
+var allProjects    = [];
+var currentProjIdx = 0;
+var activeTab      = 'tab-projet';
+var msgMode        = 'public'; // 'public' | 'prive'
+
 function proj() { return allProjects[currentProjIdx]; }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   DONNÉES DÉMO
-   ═══════════════════════════════════════════════════════════════════════════ */
-function buildDemoProjects(user) {
-
-  /* helper : date relative à une base */
-  function J(days, base) {
-    base = base || '2026-01-01';
-    var d = new Date(base);
-    d.setDate(d.getDate() + days);
-    return d.toISOString().slice(0, 10);
-  }
-
-  /* helper : mission Home in Love (offerte si partenaire) */
-  function accomp(date) {
-    return {
-      name: '🤝 Accompagnement gestion de projet Home in Love',
-      type: user.partenaire ? 'subvention' : 'mission',
-      date: date || '2026-01-05',
-      prix: user.partenaire ? 0 : 190,
-      delegation: 'timonia', delegatee: '', done: false, validated: false,
-    };
-  }
-
-  /* ─── catalogue complet ─── */
-  var ALL = {
-
-    /* ── RECHERCHE LOCATION ── */
-    'location': {
-      type: 'location',
-      description: 'Recherche d\'un T2 meublé — Lyon Part-Dieu',
-      objectif: 'Trouver un logement avant ma prise de poste le 1er mars 2026',
-      adresse: 'Lyon 3e / Lyon 6e — 69003, 69006',
-      deadline: '2026-03-01',
-      budget1Label: 'Loyer max CC', budget1: 850, budget1Suffix: '€/mois',
-      budget2Label: 'Budget frais & dépôt', budget2: 2500,
-      nextMissionId: 28, nextNoteId: 3,
-      prestataires: [
-        { id:1, nom:'Home in Love', type:'timonia', avatar:'⭐',
-          email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX',
-          specialite:'Accompagnement immobilier',
-          missions:['Préparation dossier','Vérif. aides','Dépôt dossiers visites','Signature bail'],
-          coutEngage:500, coutPrev:350 }
-      ],
-      notes: [
-        { id:1, text:'Visite appart rue Garibaldi — très lumineux, bon état général. Propriétaire réactif. À rappeler avant vendredi.', date:'2026-01-22T14:32:00' },
-        { id:2, text:'Dossier CAF envoyé. En attente confirmation sous 15 jours.', date:'2026-01-16T09:15:00' },
-      ],
-      missions: [
-        { id:1,  name:'Définition des besoins',                             type:'mission',    date:J(0),  prix:100,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:2,  name:'Définition du budget et cahier des charges',          type:'mission',    date:J(3),  prix:100,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:3,  name:'Préparation du dossier locataire',                    type:'mission',    date:J(7),  prix:200,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:4,  name:'💰 Vérif. éligibilité Visale',                       type:'aide',       date:J(7),  prix:150,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:5,  name:'🎁 Demande Visale — Garantie loyers impayés',        type:'subvention', date:J(10), prix:0,    delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:6,  name:'💰 Vérif. éligibilité Loca-Pass',                   type:'aide',       date:J(7),  prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:7,  name:'🏦 Demande Loca-Pass — Prêt 0% dépôt garantie',     type:'subvention', date:J(10), prix:0,    delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:8,  name:'💰 Vérif. éligibilité APL/ALS CAF',                 type:'aide',       date:J(7),  prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:9,  name:'🎁 Demande APL/ALS auprès de la CAF',               type:'subvention', date:J(14), prix:0,    delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:10, name:'💰 Vérif. éligibilité prime déménagement CAF',      type:'aide',       date:J(7),  prix:150,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:11, name:'🎁 Dépôt dossier prime déménagement CAF (1 309 €)', type:'subvention', date:J(14), prix:1309, delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:12, name:'Vérification conformité bail (loi ALUR)',             type:'mission',    date:J(9),  prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:13, name:'Vérification DPE fourni par le propriétaire',         type:'mission',    date:J(9),  prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:14, name:'Recherche des logements',                             type:'mission',    date:J(7),  prix:200,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:15, name:'Dépôt des dossiers pour demande de visites',          type:'mission',    date:J(14), prix:200,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:16, name:'Visites',                                             type:'mission',    date:J(21), prix:200,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:17, name:'Dossier accepté',                                     type:'mission',    date:J(30), prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:18, name:'Signature du bail',                                   type:'mission',    date:J(35), prix:200,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:19, name:'Versement caution et loyer',                          type:'mission',    date:J(35), prix:100,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:20, name:'Prise d\'une assurance habitation',                   type:'mission',    date:J(35), prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:21, name:'Mise en place abonnement Enedis',                     type:'mission',    date:J(38), prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:22, name:'Mise en place abonnement eau',                        type:'mission',    date:J(38), prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:23, name:'Mise en place abonnement internet/box',               type:'mission',    date:J(38), prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:24, name:'Entrée dans les lieux',                               type:'mission',    date:J(44), prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:25, name:'État des lieux contradictoire si besoin (sous 10j)',  type:'mission',    date:J(54), prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:26, name:'Déclaration nouveau logement (impôts / CAF / Sécu)', type:'mission',    date:J(55), prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        Object.assign({ id:27 }, accomp(J(0))),
-      ],
-      documents: { nextDocId:18, uploaded:[], sections:[
-        { title:'Documents à fournir', items:[
-          { id:1,  name:'Pièce d\'identité (recto/verso)',          status:'todo'    },
-          { id:2,  name:'3 derniers bulletins de salaire',           status:'done'    },
-          { id:3,  name:'Dernier avis d\'imposition',                status:'done'    },
-          { id:4,  name:'Contrat de travail / promesse d\'embauche', status:'done'    },
-          { id:5,  name:'RIB',                                       status:'todo'    },
-          { id:6,  name:'Justificatif de domicile actuel',           status:'todo'    },
-          { id:7,  name:'Attestation employeur',                     status:'todo'    },
-          { id:8,  name:'3 derniers relevés bancaires',              status:'todo'    },
-        ]},
-        { title:'Documents à recevoir', items:[
-          { id:9,  name:'Bail signé',                                status:'waiting' },
-          { id:10, name:'État des lieux d\'entrée',                  status:'waiting' },
-          { id:11, name:'Attestation Visale',                        status:'done'    },
-          { id:12, name:'Quittance dépôt de garantie',               status:'waiting' },
-          { id:13, name:'DPE du logement',                           status:'waiting' },
-          { id:14, name:'Règlement de copropriété',                  status:'waiting' },
-          { id:15, name:'Attestation assurance habitation',          status:'waiting' },
-          { id:16, name:'Confirmation APL/ALS CAF',                  status:'waiting' },
-          { id:17, name:'Confirmation prime déménagement CAF',       status:'waiting' },
-        ]},
-      ]},
-    },
-
-    /* ── MISE EN LOCATION ── */
-    'mise-location': {
-      type: 'mise-location',
-      description: 'Mise en location studio 35m² — Paris 11e',
-      objectif: 'Louer mon bien rapidement avec un locataire fiable',
-      adresse: '23 rue de la Roquette, 75011 Paris',
-      deadline: '2026-03-01',
-      budget1Label: null, budget1: 0,
-      budget2Label: 'Budget frais & prestations', budget2: 2000,
-      nextMissionId: 25, nextNoteId: 3,
-      prestataires: [
-        { id:1, nom:'Home in Love', type:'timonia', avatar:'⭐',
-          email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX',
-          specialite:'Accompagnement immobilier',
-          missions:['Estimation loyer','Vérif. aides','Étude dossiers','Rédaction bail','État des lieux'],
-          coutEngage:700, coutPrev:300 }
-      ],
-      notes: [
-        { id:1, text:'Diagnostics DPE commandés. Résultat sous 5 jours. Étiquette C attendue.', date:'2026-01-15T10:00:00' },
-        { id:2, text:'Annonce rédigée par Home in Love. Publication prévue lundi. Photos réalisées ce matin.', date:'2026-01-19T11:30:00' },
-      ],
-      missions: [
-        { id:1,  name:'Estimation du loyer marché',                     type:'mission',    date:'2026-01-05', prix:200,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:2,  name:'💰 Vérif. éligibilité Loc\'Avantages',          type:'aide',       date:'2026-01-08', prix:150,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:3,  name:'🎁 Dépôt dossier Loc\'Avantages',              type:'subvention', date:'2026-01-19', prix:0,    delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:4,  name:'💰 Vérif. éligibilité conventionnement ANAH',  type:'aide',       date:'2026-01-08', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:5,  name:'🎁 Dépôt dossier conventionnement ANAH',       type:'subvention', date:'2026-01-19', prix:0,    delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:6,  name:'Vérification conformité logement',               type:'mission',    date:'2026-01-08', prix:150,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:7,  name:'Préparation et home staging',                    type:'mission',    date:'2026-01-12', prix:300,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:8,  name:'Réalisation diagnostics obligatoires DPE',       type:'mission',    date:'2026-01-15', prix:400,  delegation:'other',   delegatee:'Diag Express', done:false, validated:false },
-        { id:9,  name:'Rédaction annonce et photos',                    type:'mission',    date:'2026-01-19', prix:200,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:10, name:'Publication de l\'annonce',                      type:'mission',    date:'2026-01-22', prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:11, name:'Sélection des candidats',                        type:'mission',    date:'2026-01-29', prix:100,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:12, name:'Visites',                                        type:'mission',    date:'2026-02-02', prix:200,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:13, name:'Vérification avis d\'imposition du candidat',    type:'mission',    date:'2026-02-09', prix:100,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:14, name:'Vérification cohérence du dossier',              type:'mission',    date:'2026-02-09', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:15, name:'Vérification des références (appel employeur)',  type:'mission',    date:'2026-02-09', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:16, name:'Étude des dossiers locataires',                  type:'mission',    date:'2026-02-09', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:17, name:'Rédaction du bail',                              type:'mission',    date:'2026-02-16', prix:200,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:18, name:'Vérification assurance habitation locataire',    type:'mission',    date:'2026-02-19', prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:19, name:'État des lieux d\'entrée',                       type:'mission',    date:'2026-02-19', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:20, name:'Vérification que le loyer a bien été payé',      type:'mission',    date:'2026-02-28', prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:21, name:'Remise des clés',                                type:'mission',    date:'2026-02-19', prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:22, name:'Souscription assurance PNO',                     type:'mission',    date:'2026-02-19', prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:23, name:'Déclaration revenus locatifs',                   type:'mission',    date:'2026-02-28', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        Object.assign({ id:24 }, accomp('2026-01-05')),
-      ],
-      documents: { nextDocId:15, uploaded:[], sections:[
-        { title:'Documents du bien', items:[
-          { id:1,  name:'Titre de propriété',               status:'done'    },
-          { id:2,  name:'DPE réalisé',                      status:'waiting' },
-          { id:3,  name:'DDT complet',                      status:'waiting' },
-          { id:4,  name:'Attestation assurance PNO',        status:'todo'    },
-          { id:5,  name:'Règlement de copropriété',         status:'done'    },
-        ]},
-        { title:'Documents locataire', items:[
-          { id:6,  name:'Dossier locataire complet',        status:'waiting' },
-          { id:7,  name:'Pièce d\'identité locataire',      status:'waiting' },
-          { id:8,  name:'3 bulletins de salaire locataire', status:'waiting' },
-          { id:9,  name:'Avis d\'imposition locataire',     status:'waiting' },
-          { id:10, name:'Attestation employeur locataire',  status:'waiting' },
-        ]},
-        { title:'Documents contractuels', items:[
-          { id:11, name:'Bail signé (loi ALUR)',                      status:'waiting' },
-          { id:12, name:'État des lieux d\'entrée signé',             status:'waiting' },
-          { id:13, name:'Attestation assurance habitation locataire', status:'waiting' },
-          { id:14, name:'Quittance dépôt de garantie',                status:'waiting' },
-        ]},
-      ]},
-    },
-
-    /* ── MISE EN VENTE ── */
-    'vente': {
-      type: 'vente',
-      description: 'Mise en vente appartement 65m² — Bordeaux Chartrons',
-      objectif: 'Vendre avant juillet 2026 pour financer le prochain achat',
-      adresse: '14 rue Notre-Dame, 33000 Bordeaux',
-      deadline: '2026-07-01',
-      budget1Label: null, budget1: 0,
-      budget2Label: 'Budget frais & prestations', budget2: 8000,
-      nextMissionId: 25, nextNoteId: 3,
-      prestataires: [
-        { id:1, nom:'Home in Love', type:'timonia', avatar:'⭐', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', specialite:'Accompagnement immobilier', missions:['Estimation','Diagnostics','Annonce','Suivi compromis','Coordination notaire'], coutEngage:950, coutPrev:2150 },
-        { id:2, nom:'Diag Express', type:'other', avatar:'🔧', email:'contact@diagexpress.fr', tel:'05 56 XX XX XX', specialite:'Diagnostics immobiliers', missions:['Diagnostics obligatoires (DDT complet)'], coutEngage:500, coutPrev:0 },
-      ],
-      notes: [
-        { id:1, text:'Acheteur potentiel — famille avec 2 enfants, financement en cours. Accord de principe banque reçu. RDV compromis semaine prochaine.', date:'2026-02-20T16:45:00' },
-        { id:2, text:'Photos réalisées par photographe pro. Très bon résultat. Annonce mise en ligne sur SeLoger et LeBonCoin.', date:'2026-01-19T11:20:00' },
-      ],
-      missions: [
-        { id:1,  name:'Estimation du prix de vente',                       type:'mission',    date:'2026-01-05', prix:250,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:2,  name:'Récupération du titre de propriété',                type:'mission',    date:'2026-01-05', prix:50,   delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:3,  name:'Vérification absence d\'hypothèque',                type:'mission',    date:'2026-01-08', prix:150,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:4,  name:'💰 Vérif. éligibilité exonération plus-value',     type:'aide',       date:'2026-01-08', prix:200,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:5,  name:'🎁 Dépôt dossier exonération plus-value (500 €)',  type:'subvention', date:'2026-02-05', prix:500,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:6,  name:'💰 Vérif. éligibilité abattement fiscal',          type:'aide',       date:'2026-01-08', prix:200,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:7,  name:'Calcul de la plus-value et impôt éventuel',         type:'mission',    date:'2026-01-08', prix:200,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:8,  name:'Préparation et home staging',                       type:'mission',    date:'2026-01-12', prix:500,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:9,  name:'Réalisation diagnostics obligatoires (DDT complet)',type:'mission',    date:'2026-01-15', prix:500,  delegation:'other',   delegatee:'Diag Express', done:true, validated:true },
-        { id:10, name:'Rédaction annonce et photos pro',                   type:'mission',    date:'2026-01-19', prix:250,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:11, name:'Publication de l\'annonce',                         type:'mission',    date:'2026-01-22', prix:50,   delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:12, name:'Vérification financement avant visites',            type:'mission',    date:'2026-01-29', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:13, name:'Visites',                                           type:'mission',    date:'2026-02-02', prix:300,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:14, name:'Réception et analyse des offres',                   type:'mission',    date:'2026-02-16', prix:200,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:15, name:'Vérification financement avant acceptation offre',  type:'mission',    date:'2026-02-16', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:16, name:'Acceptation d\'une offre',                          type:'mission',    date:'2026-02-23', prix:100,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:17, name:'Signature du compromis de vente',                   type:'mission',    date:'2026-03-02', prix:900,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:18, name:'Suivi période de rétractation',                     type:'mission',    date:'2026-03-12', prix:200,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:19, name:'Coordination notaire',                              type:'mission',    date:'2026-03-17', prix:500,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:20, name:'Signature de l\'acte authentique',                  type:'mission',    date:'2026-04-05', prix:750,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:21, name:'Remise des clés',                                   type:'mission',    date:'2026-04-10', prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:22, name:'Remboursement anticipé prêt si besoin',             type:'mission',    date:'2026-04-10', prix:100,  delegation:'self',    delegatee:'', done:false, validated:false },
-        Object.assign({ id:23 }, accomp('2026-01-05')),
-      ],
-      documents: { nextDocId:15, uploaded:[], sections:[
-        { title:'Documents du bien', items:[
-          { id:1, name:'Titre de propriété',                       status:'done' },
-          { id:2, name:'DDT complet (élec, gaz, amiante, plomb)', status:'done' },
-          { id:3, name:'DPE',                                      status:'done' },
-          { id:4, name:'Règlement de copropriété',                 status:'done' },
-          { id:5, name:'PV AG des 3 dernières années',             status:'todo' },
-          { id:6, name:'Relevé charges copropriété',               status:'todo' },
-          { id:7, name:'Taxe foncière dernière année',             status:'todo' },
-        ]},
-        { title:'Documents financiers', items:[
-          { id:8,  name:'Tableau d\'amortissement prêt en cours', status:'todo'    },
-          { id:9,  name:'Attestation remboursement anticipé',      status:'waiting' },
-          { id:10, name:'Calcul plus-value et impôt',              status:'waiting' },
-          { id:11, name:'Attestation exonération plus-value',      status:'waiting' },
-        ]},
-        { title:'Documents contractuels', items:[
-          { id:12, name:'Compromis de vente signé',  status:'waiting' },
-          { id:13, name:'Acte authentique de vente', status:'waiting' },
-          { id:14, name:'Attestation de vente notaire', status:'waiting' },
-        ]},
-      ]},
-    },
-
-    /* ── RÉNOVATION ── */
-    'renovation': {
-      type: 'renovation',
-      description: 'Rénovation énergétique maison 90m² — Toulouse',
-      objectif: 'Passer de l\'étiquette E à B pour mise en location LMNP',
-      adresse: '8 allée des Roses, 31000 Toulouse',
-      deadline: '2026-05-15',
-      budget1Label: 'Budget travaux total', budget1: 25000, budget1Suffix: '€',
-      budget2Label: null, budget2: 0,
-      nextMissionId: 32, nextNoteId: 3,
-      prestataires: [
-        { id:1, nom:'Home in Love', type:'timonia', avatar:'⭐', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', specialite:'Accompagnement & aides', missions:['Estimation budget','Vérif. aides','Validation artisans','Suivi chantier'], coutEngage:750, coutPrev:500 },
-        { id:2, nom:'Elec Martin', type:'other', avatar:'⚡', email:'martin.elec@gmail.com', tel:'06 12 34 56 78', specialite:'Électricité RGE', missions:['Travaux électricité'], coutEngage:3450, coutPrev:0 },
-        { id:3, nom:'Thermo Rénov', type:'other', avatar:'🏗️', email:'contact@thermobrenov.fr', tel:'05 61 XX XX XX', specialite:'Isolation & chauffage RGE', missions:['Isolation combles','Pompe à chaleur'], coutEngage:0, coutPrev:12000 },
-      ],
-      notes: [
-        { id:1, text:'Dossier MaPrimeRénov\' déposé en ligne. Numéro : MPR-2026-XXXXX. Délai traitement estimé : 3 semaines.', date:'2026-01-19T10:30:00' },
-        { id:2, text:'Elec Martin retenu — meilleur rapport qualité/prix. Décennale vérifiée. RGE valide jusqu\'en 2027.', date:'2026-02-02T15:20:00' },
-      ],
-      missions: [
-        { id:1,  name:'Définition du projet et des travaux',                type:'mission',    date:'2026-01-05', prix:200,   delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:2,  name:'Estimation du budget travaux',                       type:'mission',    date:'2026-01-12', prix:200,   delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:3,  name:'💰 Vérif. éligibilité MaPrimeRénov\'',             type:'aide',       date:'2026-01-12', prix:250,   delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:4,  name:'🎁 Dépôt dossier MaPrimeRénov\' (4 200 €)',        type:'subvention', date:'2026-01-19', prix:4200,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:5,  name:'💰 Vérif. éligibilité Éco-PTZ',                    type:'aide',       date:'2026-01-12', prix:250,   delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:6,  name:'🎁 Dépôt dossier Éco-PTZ (2 000 €)',               type:'subvention', date:'2026-01-26', prix:2000,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:7,  name:'💰 Vérif. éligibilité CEE',                        type:'aide',       date:'2026-01-12', prix:250,   delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:8,  name:'🎁 Dépôt dossier CEE (1 500 €)',                   type:'subvention', date:'2026-01-26', prix:1500,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:9,  name:'💰 Vérif. éligibilité Aide Action Logement travaux',type:'aide',      date:'2026-01-12', prix:250,   delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:10, name:'🎁 Dépôt dossier Aide Action Logement (500 €)',     type:'subvention', date:'2026-01-26', prix:500,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:11, name:'Prise de photos avant travaux',                      type:'mission',    date:'2026-01-19', prix:50,    delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:12, name:'Recherche artisans RGE & mise en concurrence',       type:'mission',    date:'2026-01-19', prix:300,   delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:13, name:'Vérification décennales des artisans',               type:'mission',    date:'2026-01-26', prix:150,   delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:14, name:'Obtention des devis',                                type:'mission',    date:'2026-01-26', prix:100,   delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:15, name:'Validation des artisans',                            type:'mission',    date:'2026-02-02', prix:200,   delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:16, name:'Travaux électricité — Elec Martin',                  type:'mission',    date:'2026-02-09', prix:3450,  delegation:'other',   delegatee:'Elec Martin', done:true, validated:true },
-        { id:17, name:'Isolation combles & PAC — Thermo Rénov',            type:'mission',    date:'2026-03-01', prix:12000, delegation:'other',   delegatee:'Thermo Rénov', done:false, validated:true },
-        { id:18, name:'Suivi du chantier',                                  type:'mission',    date:'2026-02-09', prix:500,   delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:19, name:'Suivi paiements échelonnés artisans',                type:'mission',    date:'2026-02-09', prix:150,   delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:20, name:'Paiement des artisans',                              type:'mission',    date:'2026-02-09', prix:100,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:21, name:'Réception des travaux',                              type:'mission',    date:'2026-04-25', prix:200,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:22, name:'Prise de photos après travaux',                      type:'mission',    date:'2026-04-25', prix:50,    delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:23, name:'Transmission justificatifs déblocage aides',         type:'mission',    date:'2026-04-30', prix:100,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:24, name:'Conservation factures (aides et garanties)',         type:'mission',    date:'2026-04-30', prix:50,    delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:25, name:'Levée des réserves',                                 type:'mission',    date:'2026-05-05', prix:150,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:26, name:'Mise à jour DPE après travaux',                      type:'mission',    date:'2026-05-10', prix:200,   delegation:'other',   delegatee:'', done:false, validated:false },
-        { id:27, name:'Bilan final et clôture du chantier',                 type:'mission',    date:'2026-05-15', prix:100,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:28, name:'Vérification assurance dommages-ouvrage',            type:'mission',    date:'2026-02-02', prix:150,   delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:29, name:'Demande permis / déclaration préalable',             type:'mission',    date:'2026-02-02', prix:200,   delegation:'self',    delegatee:'', done:false, validated:false },
-        Object.assign({ id:30 }, accomp('2026-01-05')),
-      ],
-      documents: { nextDocId:20, uploaded:[], sections:[
-        { title:'Documents administratifs', items:[
-          { id:1, name:'Titre de propriété',                          status:'done'    },
-          { id:2, name:'Permis de construire / déclaration préalable',status:'waiting' },
-          { id:3, name:'Autorisation copropriété si besoin',          status:'todo'    },
-        ]},
-        { title:'Documents artisans', items:[
-          { id:4, name:'Devis Elec Martin — Électricité',             status:'done' },
-          { id:5, name:'Devis Thermo Rénov — Isolation & PAC',        status:'done' },
-          { id:6, name:'Attestation décennale Elec Martin',           status:'done' },
-          { id:7, name:'Attestation décennale Thermo Rénov',          status:'done' },
-          { id:8, name:'Factures travaux électricité',                status:'done' },
-          { id:9, name:'Factures travaux isolation & PAC',            status:'waiting' },
-        ]},
-        { title:'Documents aides', items:[
-          { id:10, name:'Dossier MaPrimeRénov\' déposé',             status:'done'    },
-          { id:11, name:'Attestation MaPrimeRénov\' obtenue',         status:'waiting' },
-          { id:12, name:'Dossier Éco-PTZ déposé',                    status:'waiting' },
-          { id:13, name:'Dossier CEE déposé',                        status:'waiting' },
-          { id:14, name:'Dossier Aide Action Logement déposé',       status:'waiting' },
-        ]},
-        { title:'Documents de réception', items:[
-          { id:15, name:'Photos avant travaux',                       status:'done'    },
-          { id:16, name:'Photos après travaux',                       status:'waiting' },
-          { id:17, name:'PV de réception des travaux',                status:'waiting' },
-          { id:18, name:'DPE mis à jour après travaux',               status:'waiting' },
-          { id:19, name:'Attestation assurance dommages-ouvrage',     status:'waiting' },
-        ]},
-      ]},
-    },
-    /* ── RECHERCHE ACHAT ── */
-    'achat': {
-      type: 'achat',
-      description: 'Recherche d\'un appartement 3 pièces — Bordeaux',
-      objectif: 'Acheter avant fin 2026 avec un financement optimisé',
-      adresse: 'Bordeaux Chartrons / Caudéran — 33000',
-      deadline: '2026-12-01',
-      budget1Label: 'Budget d\'achat max', budget1: 320000, budget1Suffix: '€',
-      budget2Label: 'Budget frais & prestations', budget2: 5000,
-      nextMissionId: 28, nextNoteId: 3,
-      prestataires: [
-        { id:1, nom:'Home in Love', type:'timonia', avatar:'⭐',
-          email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX',
-          specialite:'Accompagnement immobilier',
-          missions:['Simulation prêt','Vérif. aides','Analyse offres','Coordination notaire'],
-          coutEngage:600, coutPrev:800 },
-        { id:2, nom:'Crédit Conseil', type:'other', avatar:'🏦',
-          email:'contact@creditconseil.fr', tel:'05 56 XX XX XX',
-          specialite:'Courtier en financement',
-          missions:['Dossier bancaire','Négociation taux'],
-          coutEngage:0, coutPrev:1500 },
-      ],
-      notes: [
-        { id:1, text:'Visite T3 rue Fondaudège — 68m², DPE C, charges 120€/mois. Prix demandé 295k. Potentiel de négo à 280k.', date:'2026-02-10T16:00:00' },
-        { id:2, text:'Accord de principe Crédit Agricole obtenu. Taux 3,45% sur 20 ans. Mensualité estimée : 1 580€ pour 280k.', date:'2026-01-28T10:30:00' },
-      ],
-      missions: [
-        { id:1,  name:'Définition du projet et cahier des charges',        type:'mission',    date:'2026-01-05', prix:150,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:2,  name:'Définition du budget global d\'achat',              type:'mission',    date:'2026-01-05', prix:100,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:3,  name:'Simulation de prêt et capacité d\'emprunt',         type:'mission',    date:'2026-01-08', prix:200,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:4,  name:'💰 Vérif. éligibilité PTZ (Prêt à Taux Zéro)',     type:'aide',       date:'2026-01-08', prix:200,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:5,  name:'🎁 Dossier PTZ — économie estimée 8 000 €',        type:'subvention', date:'2026-01-15', prix:8000, delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:6,  name:'💰 Vérif. éligibilité Aide Action Logement achat', type:'aide',       date:'2026-01-08', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:7,  name:'🎁 Dossier Aide Action Logement achat',            type:'subvention', date:'2026-01-22', prix:0,    delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:8,  name:'💰 Vérif. éligibilité exonération droits mutation', type:'aide',      date:'2026-01-08', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:9,  name:'Préparation du dossier bancaire',                   type:'mission',    date:'2026-01-12', prix:250,  delegation:'timonia', delegatee:'', done:true,  validated:false },
-        { id:10, name:'Mise en concurrence des banques / courtier',        type:'mission',    date:'2026-01-15', prix:300,  delegation:'other',   delegatee:'Crédit Conseil', done:true, validated:true },
-        { id:11, name:'Obtention accord de principe bancaire',             type:'mission',    date:'2026-01-28', prix:100,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:12, name:'Définition des critères de recherche',              type:'mission',    date:'2026-01-08', prix:100,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:13, name:'Recherche des biens',                               type:'mission',    date:'2026-01-15', prix:300,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:14, name:'Visites',                                           type:'mission',    date:'2026-02-02', prix:200,  delegation:'self',    delegatee:'', done:true,  validated:false },
-        { id:15, name:'Vérification urbanisme et servitudes',              type:'mission',    date:'2026-02-09', prix:150,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:16, name:'Vérification des charges de copropriété',          type:'mission',    date:'2026-02-09', prix:100,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:17, name:'Vérification DPE et diagnostics',                  type:'mission',    date:'2026-02-09', prix:100,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:18, name:'Négociation du prix',                               type:'mission',    date:'2026-02-16', prix:200,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:19, name:'Rédaction et dépôt de l\'offre d\'achat',          type:'mission',    date:'2026-02-23', prix:100,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:20, name:'Signature du compromis de vente',                   type:'mission',    date:'2026-03-09', prix:500,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:21, name:'Obtention de l\'offre de prêt définitive',         type:'mission',    date:'2026-03-23', prix:200,  delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:22, name:'Coordination notaire acheteur',                     type:'mission',    date:'2026-04-01', prix:400,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:23, name:'Signature de l\'acte authentique',                  type:'mission',    date:'2026-04-28', prix:500,  delegation:'timonia', delegatee:'', done:false, validated:false },
-        { id:24, name:'Remise des clés et état des lieux',                 type:'mission',    date:'2026-04-28', prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:25, name:'Souscription assurance habitation',                 type:'mission',    date:'2026-04-28', prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        { id:26, name:'Déclaration changement de domicile',                type:'mission',    date:'2026-05-05', prix:50,   delegation:'self',    delegatee:'', done:false, validated:false },
-        Object.assign({ id:27 }, accomp('2026-01-05')),
-      ],
-      documents: { nextDocId:18, uploaded:[], sections:[
-        { title:'Documents personnels', items:[
-          { id:1,  name:'Pièce d\'identité (recto/verso)',          status:'done'    },
-          { id:2,  name:'3 derniers bulletins de salaire',           status:'done'    },
-          { id:3,  name:'Dernier avis d\'imposition',                status:'done'    },
-          { id:4,  name:'3 derniers relevés bancaires',              status:'done'    },
-          { id:5,  name:'Contrat de travail',                        status:'done'    },
-          { id:6,  name:'Justificatif de domicile actuel',           status:'done'    },
-        ]},
-        { title:'Documents financement', items:[
-          { id:7,  name:'Accord de principe bancaire',               status:'done'    },
-          { id:8,  name:'Offre de prêt définitive',                  status:'waiting' },
-          { id:9,  name:'Attestation PTZ',                           status:'done'    },
-          { id:10, name:'Tableau d\'amortissement prévisionnel',     status:'waiting' },
-        ]},
-        { title:'Documents du bien', items:[
-          { id:11, name:'Compromis de vente signé',                  status:'waiting' },
-          { id:12, name:'DDT complet (diagnostics)',                  status:'waiting' },
-          { id:13, name:'DPE du bien',                               status:'waiting' },
-          { id:14, name:'Règlement de copropriété',                  status:'waiting' },
-          { id:15, name:'PV AG des 3 dernières années',              status:'todo'    },
-          { id:16, name:'Relevé charges copropriété',                status:'todo'    },
-        ]},
-        { title:'Documents contractuels', items:[
-          { id:17, name:'Acte authentique d\'achat',                 status:'waiting' },
-        ]},
-      ]},
-    },
-  };
-
-  /* Marie Laurent → mise-location uniquement */
-  if (user.email === 'marie@demo.fr') {
-    return [ ALL['mise-location'] ];
-  }
-  return [ ALL[user.projetType] || ALL['location'] ];
-}
-
-/* ── Projet vide avec missions prédéfinies selon le type ── */
-function newEmptyProject(type, description, adresse, objectif, deadline) {
-  /* On clone les missions du template correspondant */
-  var template = buildDemoProjects(currentUser).find(function(p){ return p.type === type; });
-  if (!template) {
-    /* Si pas de démo dispo pour ce type, on cherche dans le catalogue complet */
-    var fakeUser = Object.assign({}, currentUser, { projetType: type });
-    var found = buildDemoProjects(fakeUser);
-    template = found[0] || null;
-  }
-
-  var missions   = [];
-  var documents  = { sections: [], nextDocId: 1, uploaded: [] };
-  var prestataires = [];
-  var nextMissionId = 1;
-
-  if (template) {
-    /* Clonage profond des missions */
-    missions = JSON.parse(JSON.stringify(template.missions));
-    /* Remise à zéro de l'état */
-    missions.forEach(function(m) { m.done = false; m.validated = false; });
-    nextMissionId = template.nextMissionId;
-    documents     = JSON.parse(JSON.stringify(template.documents));
-    /* Réinitialise les statuts docs */
-    documents.sections.forEach(function(s) {
-      s.items.forEach(function(i) { i.status = 'todo'; });
-    });
-    documents.uploaded = [];
-    prestataires = JSON.parse(JSON.stringify(template.prestataires));
-  }
-
-  return {
-    type: type,
-    description: description,
-    objectif: objectif || '',
-    adresse: adresse || '',
-    deadline: deadline || '',
-    budget1Label: template ? template.budget1Label : null,
-    budget1: template ? template.budget1 : 0,
-    budget1Suffix: template ? template.budget1Suffix : '€',
-    budget2Label: template ? template.budget2Label : 'Budget frais & prestations',
-    budget2: template ? template.budget2 : 0,
-    nextMissionId: nextMissionId,
-    nextNoteId: 1,
-    prestataires: prestataires,
-    notes: [],
-    missions: missions,
-    documents: documents,
-  };
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ─────────────────────────────────────────────────────────────────────────
    INIT
-   ═══════════════════════════════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', function () {
-  currentUser = authRequire();
+   ───────────────────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function() {
+  currentUser = authRequire(['client']);
   if (!currentUser) return;
 
-  allProjects    = buildDemoProjects(currentUser);
-  currentProjIdx = 0;
+  allProjects = buildDemoProjects();
 
   renderNavbar();
   renderSidebar();
-  loadProject(0);
-
-  /* Ctrl+Entrée dans la zone notes */
-  var ta = document.getElementById('noteInput');
-  if (ta) ta.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addNote();
-  });
+  renderProject();
+  bindTabs();
+  showOnboardingBanner();
 });
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   CHARGEMENT D'UN PROJET
-   ═══════════════════════════════════════════════════════════════════════════ */
-function loadProject(idx) {
-  currentProjIdx = idx;
-  detailOpen     = false;
-  renderSidebar();
-  renderProjectHeader();
-  renderTabs();
-  renderBilan();
-  renderMissions();
-  renderPrestataires();
-  renderDocuments();
-  renderNotes();
-  switchTab('tab-bilan');
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ─────────────────────────────────────────────────────────────────────────
    NAVBAR
-   ═══════════════════════════════════════════════════════════════════════════ */
+   ───────────────────────────────────────────────────────────────────────── */
 function renderNavbar() {
-  var u = currentUser;
-  document.getElementById('navAvatar').textContent  = u.avatar;
-  document.getElementById('navName').textContent    = u.prenom + ' ' + u.nom;
-  document.getElementById('navCompany').textContent = u.entreprise || 'Sans entreprise partenaire';
-  var badge = document.getElementById('navBadge');
-  badge.style.display = 'inline-flex';
-  if (u.partenaire) {
-    badge.textContent = '👔 Entreprise partenaire';
-  } else {
-    badge.textContent      = '👤 Sans partenaire';
-    badge.style.background = 'rgba(132,148,184,0.1)';
-    badge.style.color      = '#8494b8';
-    badge.style.border     = '1px solid rgba(132,148,184,0.2)';
-  }
+  var el = document.getElementById('navAvatar');
+  if (el) el.textContent = currentUser.avatar;
+  el = document.getElementById('navName');
+  if (el) el.textContent = currentUser.prenom + ' ' + currentUser.nom;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ─────────────────────────────────────────────────────────────────────────
+   ONBOARDING BANNER
+   ───────────────────────────────────────────────────────────────────────── */
+function showOnboardingBanner() {
+  if (sessionStorage.getItem('hil_onboarding_seen')) return;
+  var banner = document.getElementById('onboardingBanner');
+  if (banner) banner.style.display = 'flex';
+}
+function closeOnboarding() {
+  sessionStorage.setItem('hil_onboarding_seen', '1');
+  var banner = document.getElementById('onboardingBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    SIDEBAR
-   ═══════════════════════════════════════════════════════════════════════════ */
+   ───────────────────────────────────────────────────────────────────────── */
 function renderSidebar() {
   var list = document.getElementById('sidebarProjectList');
   if (!list) return;
   list.innerHTML = '';
-
   allProjects.forEach(function(p, idx) {
-    var cfg  = TYPE_CONFIG[p.type] || TYPE_CONFIG['autre'];
-    var done = p.missions.filter(function(m){ return m.done; }).length;
-    var tot  = p.missions.length;
-    var pct  = tot ? Math.round(done / tot * 100) : 0;
-
+    var cfg = PROJECT_TYPES[p.type] || {};
+    var activePhase = p.phases.filter(function(ph){ return ph.status === 'active'; })[0];
     var item = document.createElement('div');
     item.className = 'project-item' + (idx === currentProjIdx ? ' active' : '');
-    item.onclick   = function() { loadProject(idx); };
+    item.onclick = function() { switchProject(idx); };
     item.innerHTML =
-      '<div class="proj-type-dot" style="background:' + cfg.color + '"></div>' +
-      '<div style="flex:1;min-width:0">' +
-        '<div class="proj-item-name">' + cfg.emoji + ' ' + cfg.label + '</div>' +
-        '<div class="proj-item-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px" title="' + p.description + '">' + p.description + '</div>' +
-        '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">' +
-          '<div class="proj-item-status status-en-cours">En cours</div>' +
-          '<span style="font-size:10px;color:var(--muted)">' + pct + '%</span>' +
-        '</div>' +
+      '<div class="proj-type-dot" style="background:' + (cfg.color||'#888') + '"></div>' +
+      '<div>' +
+        '<div class="proj-item-name">' + (cfg.label || p.type) + '</div>' +
+        '<div class="proj-item-meta">' + p.adresse.split('—')[0].trim() + '</div>' +
+        (activePhase ? '<div class="proj-item-phase">' + activePhase.title + '</div>' : '') +
       '</div>';
     list.appendChild(item);
   });
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MODAL NOUVEAU PROJET
-   ═══════════════════════════════════════════════════════════════════════════ */
-function openNewProject() {
-  var existing = document.getElementById('newProjModal');
-  if (existing) { existing.removeAttribute('hidden'); return; }
-
-  var m = document.createElement('div');
-  m.className = 'modal-bg';
-  m.id        = 'newProjModal';
-
-  var typeOptions = Object.keys(TYPE_CONFIG).map(function(k) {
-    return '<option value="' + k + '">' + TYPE_CONFIG[k].emoji + ' ' + TYPE_CONFIG[k].label + '</option>';
-  }).join('');
-
-  m.innerHTML =
-    '<div class="modal-box">' +
-      '<div class="modal-header">' +
-        '<div>' +
-          '<div class="modal-title">Nouveau projet</div>' +
-          '<div class="modal-sub">Ajoutez un projet immobilier à votre espace</div>' +
-        '</div>' +
-        '<button class="modal-close" onclick="closeNewProject()">✕</button>' +
-      '</div>' +
-      '<div class="modal-form">' +
-        '<div class="form-group"><label>Type de projet</label><select id="npType">' + typeOptions + '</select></div>' +
-        '<div class="form-group"><label>Description</label><input type="text" id="npDesc" placeholder="Ex : Recherche T3 Paris 15e…"></div>' +
-        '<div class="form-group"><label>Adresse / Zone</label><input type="text" id="npAdresse" placeholder="Ex : Paris 15e, 75015"></div>' +
-        '<div class="form-group"><label>Objectif</label><input type="text" id="npObjectif" placeholder="Ex : Trouver avant le 1er juin…"></div>' +
-        '<div class="form-group"><label>Deadline</label><input type="date" id="npDeadline"></div>' +
-        '<button class="btn btn-primary w-full" onclick="createNewProject()" style="margin-top:8px">Créer le projet →</button>' +
-      '</div>' +
-    '</div>';
-
-  document.body.appendChild(m);
-  m.addEventListener('click', function(e) { if (e.target === m) closeNewProject(); });
+function switchProject(idx) {
+  currentProjIdx = idx;
+  renderSidebar();
+  renderProject();
 }
 
-function closeNewProject() {
-  var m = document.getElementById('newProjModal');
-  if (m) m.setAttribute('hidden', '');
+/* ─────────────────────────────────────────────────────────────────────────
+   RENDER PROJECT (dispatch vers l'onglet actif)
+   ───────────────────────────────────────────────────────────────────────── */
+function renderProject() {
+  renderHeader();
+  if (activeTab === 'tab-projet')       renderTabProjet();
+  if (activeTab === 'tab-documents')    renderTabDocuments();
+  if (activeTab === 'tab-prestataires') renderTabPrestataires();
+  if (activeTab === 'tab-messagerie')   renderTabMessagerie();
 }
 
-function createNewProject() {
-  var type     = document.getElementById('npType').value;
-  var desc     = document.getElementById('npDesc').value.trim();
-  var adresse  = document.getElementById('npAdresse').value.trim();
-  var objectif = document.getElementById('npObjectif').value.trim();
-  var deadline = document.getElementById('npDeadline').value;
-
-  if (!desc) { alert('Veuillez saisir une description pour le projet.'); return; }
-
-  allProjects.push(newEmptyProject(type, desc, adresse, objectif, deadline));
-  closeNewProject();
-  loadProject(allProjects.length - 1);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   EN-TÊTE PROJET
-   ═══════════════════════════════════════════════════════════════════════════ */
-function renderProjectHeader() {
+/* ─────────────────────────────────────────────────────────────────────────
+   HEADER PROJET
+   ───────────────────────────────────────────────────────────────────────── */
+function renderHeader() {
   var p   = proj();
-  var cfg = TYPE_CONFIG[p.type] || TYPE_CONFIG['autre'];
-  var tot = p.missions.length;
-  var don = p.missions.filter(function(m){ return m.done; }).length;
-  var pct = tot ? Math.round(don / tot * 100) : 0;
+  var cfg = PROJECT_TYPES[p.type] || {};
 
-  document.getElementById('projBadge').textContent        = cfg.emoji + ' ' + cfg.label;
-  document.getElementById('projTitle').textContent        = p.description;
-  document.getElementById('projAdresse').textContent      = p.adresse   || '—';
-  document.getElementById('projObjectif').textContent     = p.objectif  || '—';
-  document.getElementById('projDeadline').textContent     = fmtDeadline(p.deadline);
-  document.getElementById('projProgressPct').textContent  = don + '/' + tot + ' missions · ' + pct + '%';
-  document.getElementById('projProgressFill').style.width = pct + '%';
+  var badge = document.getElementById('projBadge');
+  if (badge) {
+    badge.textContent = cfg.label || p.type;
+    badge.style.background = cfg.bg;
+    badge.style.color = cfg.color;
+  }
+  var title = document.getElementById('projTitle');
+  if (title) title.textContent = p.titre;
 
-  var mc = document.getElementById('missionsCount');
-  if (mc) mc.textContent = tot + ' mission' + (tot > 1 ? 's' : '') + ' · ' + don + ' réalisée' + (don > 1 ? 's' : '');
+  var adresse = document.getElementById('projAdresse');
+  if (adresse) adresse.textContent = p.adresse;
+
+  var objectif = document.getElementById('projObjectif');
+  if (objectif) objectif.textContent = p.objectif;
+
+  var deadline = document.getElementById('projDeadline');
+  if (deadline) deadline.textContent = fmtDate(p.deadline);
+
+  /* Barre de progression phases */
+  var doneCount = p.phases.filter(function(ph){ return ph.status === 'done'; }).length;
+  var pct = Math.round((doneCount / p.phases.length) * 100);
+  var fill = document.getElementById('projProgressFill');
+  if (fill) fill.style.width = pct + '%';
+  var pctEl = document.getElementById('projProgressPct');
+  if (pctEl) pctEl.textContent = 'Phase ' + doneCount + '/' + p.phases.length + ' · ' + pct + '%';
+
+  /* Badge offre */
+  var offreBadge = document.getElementById('projOffreBadge');
+  if (offreBadge) {
+    var offreLabels = { flash: 'Diagnostic Flash', copilot: 'Co-Pilote', delegation: 'Délégation Totale' };
+    offreBadge.textContent = offreLabels[p.offre] || p.offre;
+  }
+
+  /* CTA délégation — visible à partir de P3 */
+  var ctaDeleguer = document.getElementById('ctaDeleguer');
+  if (ctaDeleguer) {
+    ctaDeleguer.style.display = doneCount >= 2 ? 'inline-flex' : 'none';
+  }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   ONGLETS
-   ═══════════════════════════════════════════════════════════════════════════ */
-function switchTab(tabId) {
-  document.querySelectorAll('.dash-tab').forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('.tab-pane').forEach(function(t){ t.classList.remove('active'); });
-  var btn  = document.querySelector('[data-tab="' + tabId + '"]');
-  var pane = document.getElementById(tabId);
-  if (btn)  btn.classList.add('active');
-  if (pane) pane.classList.add('active');
-}
-
-function renderTabs() {
+/* ─────────────────────────────────────────────────────────────────────────
+   TABS
+   ───────────────────────────────────────────────────────────────────────── */
+function bindTabs() {
   document.querySelectorAll('.dash-tab').forEach(function(btn) {
-    btn.onclick = function() { switchTab(btn.dataset.tab); };
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   CALCULS FINANCIERS
-   ═══════════════════════════════════════════════════════════════════════════ */
-function calcFinance() {
-  var coutEngage = 0, coutPrev = 0;
-  var economieSelf = 0, economiePrev = 0;
-  var aideObtenue = 0, aidePrev = 0;
-  var servicesObtained = [], servicesPrev = [];
-
-  proj().missions.forEach(function(m) {
-    if (m.type === 'subvention') {
-      if (m.prix > 0) { m.done ? (aideObtenue += m.prix) : (aidePrev += m.prix); }
-      else            { m.done ? servicesObtained.push(m) : servicesPrev.push(m); }
-    } else {
-      if (m.delegation !== 'self') { m.done ? (coutEngage += m.prix || 0) : (coutPrev += m.prix || 0); }
-      else                         { m.done ? (economieSelf += m.prix || 0) : (economiePrev += m.prix || 0); }
-    }
-  });
-
-  return {
-    coutEngage:    coutEngage,
-    coutPrev:      coutPrev,
-    totalCout:     coutEngage + coutPrev,
-    economieSelf:  economieSelf,
-    economiePrev:  economiePrev,
-    totalEconomie: economieSelf + economiePrev,
-    aideObtenue:   aideObtenue,
-    aidePrev:      aidePrev,
-    totalAide:     aideObtenue + aidePrev,
-    servicesObtained: servicesObtained,
-    servicesPrev:     servicesPrev,
-  };
-}
-
-function getBudget() { return (proj().budget1 || 0) + (proj().budget2 || 0); }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   ONGLET BILAN
-   ═══════════════════════════════════════════════════════════════════════════ */
-function renderBilan() {
-  var wrap = document.getElementById('bilanContent');
-  if (!wrap) return;
-  if (!currentUser.partenaire) { renderLockedBilan(); return; }
-
-  var p      = proj();
-  var f      = calcFinance();
-  var budget = getBudget();
-  var pct    = budget > 0 ? Math.min(Math.round(f.totalCout / budget * 100), 100) : 0;
-  var restant= budget - f.totalCout;
-
-  wrap.innerHTML = '';
-
-  /* ── Budget card ── */
-  var bc = document.createElement('div');
-  bc.className = 'budget-card';
-  var b1 = p.budget1 > 0
-    ? '<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:4px">' + p.budget1Label + '</div>'
-      + '<div style="font-family:\'Lora\',serif;font-size:20px;font-weight:600;color:var(--text)">' + p.budget1.toLocaleString('fr-FR') + ' ' + (p.budget1Suffix || '€') + '</div></div>'
-    : '';
-  var b2 = p.budget2 > 0
-    ? '<div class="budget-amount-row"><div><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:4px">' + p.budget2Label + '</div>'
-      + '<div class="budget-amount" id="budgetDisplay">' + p.budget2.toLocaleString('fr-FR') + ' €</div></div>'
-      + '<button class="budget-edit-btn" onclick="editBudget()">✏️ Modifier</button></div>'
-    : '';
-  var progressHTML = budget > 0
-    ? '<div style="margin-top:14px">'
-      + '<div class="budget-progress-label"><span>' + pct + '% engagé</span><span>' + f.totalCout.toLocaleString('fr-FR') + ' € / ' + budget.toLocaleString('fr-FR') + ' €</span></div>'
-      + '<div class="budget-progress-bar"><div class="budget-progress-fill ' + (pct < 80 ? 'green' : pct < 100 ? 'orange' : 'red') + '" style="width:' + pct + '%"></div></div>'
-      + '<div class="budget-restant"><div class="budget-restant-label">Budget restant</div>'
-      + '<div class="budget-restant-value" style="color:' + (restant >= 0 ? 'var(--green)' : 'var(--red)') + '">'
-      + (restant >= 0 ? '' : '− ') + Math.abs(restant).toLocaleString('fr-FR') + ' € ' + (restant >= 0 ? '🟢' : '🔴') + '</div></div></div>'
-    : '';
-  bc.innerHTML = '<div class="budget-card-title">Budget du projet</div>' + b1 + b2 + progressHTML;
-  wrap.appendChild(bc);
-
-  /* ── Synthèse ── */
-  var svcTotal = f.servicesObtained.length + f.servicesPrev.length;
-  var sc = document.createElement('div');
-  sc.className = 'synthese-card';
-  sc.innerHTML =
-    '<div class="synthese-row"><div><div class="synthese-label">Ce projet vous coûte</div><div class="synthese-sub">Missions déléguées réalisées + à venir</div></div><div class="synthese-value cost">− ' + f.totalCout.toLocaleString('fr-FR') + ' €</div></div>' +
-    '<div class="synthese-row"><div><div class="synthese-label">Vous avez économisé</div><div class="synthese-sub">Missions faites vous-même</div></div><div class="synthese-value saving">+ ' + f.totalEconomie.toLocaleString('fr-FR') + ' €</div></div>' +
-    '<div class="synthese-row"><div><div class="synthese-label">Vous avez bénéficié</div><div class="synthese-sub">Aides financières obtenues + à venir</div></div><div class="synthese-value benefit">+ ' + f.totalAide.toLocaleString('fr-FR') + ' €</div></div>' +
-    (svcTotal > 0
-      ? '<div class="services-row" onclick="toggleDetail()"><div><div class="synthese-label">Services obtenus</div><div class="synthese-sub">Garanties & facilités</div></div><div style="display:flex;align-items:center;gap:8px"><div class="services-count">' + svcTotal + '</div><span style="font-size:12px;color:var(--muted)">Voir ▼</span></div></div>'
-      : '');
-  wrap.appendChild(sc);
-
-  /* ── Trophée ── */
-  var gain = f.totalEconomie + f.totalAide;
-  if (gain > 0) {
-    var eq = getEquivalent(gain, p.type);
-    var ec = document.createElement('div');
-    ec.className = 'equiv-card';
-    ec.innerHTML =
-      '<div class="equiv-trophy">🏆</div>' +
-      '<div class="equiv-title">Votre gain total estimé</div>' +
-      '<div class="equiv-amount">+ ' + gain.toLocaleString('fr-FR') + ' €</div>' +
-      '<div class="equiv-sub">' + eq.line1 + '<br>' + eq.line2 + '</div>' +
-      (currentUser.partenaire ? '<div class="equiv-note">💡 Grâce à votre entreprise partenaire, ces aides ont été identifiées pour vous.</div>' : '');
-    wrap.appendChild(ec);
-  }
-
-  /* ── Bouton détail ── */
-  var tb = document.createElement('button');
-  tb.className = 'detail-toggle'; tb.id = 'detailToggle';
-  tb.onclick = toggleDetail; tb.textContent = '▼ Voir le détail complet';
-  wrap.appendChild(tb);
-
-  /* ── Panneau détail ── */
-  var dp = document.createElement('div');
-  dp.className = 'detail-panel'; dp.id = 'detailPanel';
-  dp.innerHTML = buildDetailHTML(f);
-  wrap.appendChild(dp);
-}
-
-function getEquivalent(amount, type) {
-  var p = proj();
-  if (type === 'location')   return { line1: '≈ ' + Math.round(amount / (p.budget1 || 800)) + ' mois de loyer CC économisés', line2: 'ou ' + Math.round(amount / 50) + ' mois d\'abonnements' };
-  if (type === 'vente')      return { line1: '≈ économie vs agence classique à 4%', line2: 'soit ' + Math.round(amount / 2400) + ' mois de salaire net' };
-  if (type === 'renovation') return { line1: '≈ aides récupérées grâce à Home in Love', line2: 'soit ' + Math.round(amount / 350) + ' mois de remboursement de prêt' };
-  return { line1: '≈ ' + Math.round(amount / 50) + ' mois d\'abonnements', line2: 'économisés grâce à Home in Love' };
-}
-
-function buildDetailHTML(f) {
-  var svc = f.servicesObtained.concat(f.servicesPrev);
-  var html =
-    '<div class="detail-section">' +
-      '<div class="detail-section-title">💸 Dépenses</div>' +
-      '<div class="detail-line"><div class="detail-line-name">Engagées (réalisées)<div class="detail-sub">Missions déléguées terminées</div></div><div class="detail-line-amount cost">− ' + f.coutEngage.toLocaleString('fr-FR') + ' €</div></div>' +
-      '<div class="detail-line"><div class="detail-line-name">Prévisionnelles (à venir)<div class="detail-sub">Missions déléguées restantes</div></div><div class="detail-line-amount cost">− ' + f.coutPrev.toLocaleString('fr-FR') + ' €</div></div>' +
-      '<div class="detail-total-line"><span>Total dépenses</span><span class="detail-line-amount cost">− ' + f.totalCout.toLocaleString('fr-FR') + ' €</span></div>' +
-    '</div>' +
-    '<div class="detail-section">' +
-      '<div class="detail-section-title">💪 Économies (missions faites vous-même)</div>' +
-      '<div class="detail-line"><div class="detail-line-name">Réalisées<div class="detail-sub">Missions "Je fais" terminées</div></div><div class="detail-line-amount saving">+ ' + f.economieSelf.toLocaleString('fr-FR') + ' €</div></div>' +
-      '<div class="detail-line"><div class="detail-line-name">À venir<div class="detail-sub">Missions "Je fais" restantes</div></div><div class="detail-line-amount saving">+ ' + f.economiePrev.toLocaleString('fr-FR') + ' €</div></div>' +
-      '<div class="detail-total-line"><span>Total économisé</span><span class="detail-line-amount saving">+ ' + f.totalEconomie.toLocaleString('fr-FR') + ' €</span></div>' +
-    '</div>' +
-    '<div class="detail-section">' +
-      '<div class="detail-section-title">🎁 Aides financières</div>' +
-      '<div class="detail-line"><div class="detail-line-name">Obtenues<div class="detail-sub">Aides débloquées</div></div><div class="detail-line-amount benefit">+ ' + f.aideObtenue.toLocaleString('fr-FR') + ' €</div></div>' +
-      '<div class="detail-line"><div class="detail-line-name">À obtenir<div class="detail-sub">Dossiers en cours</div></div><div class="detail-line-amount benefit">+ ' + f.aidePrev.toLocaleString('fr-FR') + ' €</div></div>' +
-      '<div class="detail-total-line"><span>Total aides</span><span class="detail-line-amount benefit">+ ' + f.totalAide.toLocaleString('fr-FR') + ' €</span></div>' +
-    '</div>';
-
-  if (svc.length > 0) {
-    html += '<div class="detail-section"><div class="detail-section-title">✅ Services & subventions</div>';
-    svc.forEach(function(s) {
-      html += '<div class="detail-service-item"><div class="detail-service-icon">' + (s.done ? '✅' : '⏳') + '</div>'
-        + '<div><div class="detail-service-name">' + s.name.replace(/^[🎁🏦🤝]\s*/, '') + '</div>'
-        + '<div class="detail-service-desc">' + (s.done ? 'Obtenu' : 'En cours') + ' · Gratuit' + (s.delegation === 'timonia' ? ' · Home in Love' : '') + '</div></div></div>';
+    btn.addEventListener('click', function() {
+      switchTab(this.dataset.tab);
     });
-    html += '</div>';
-  }
-  return html;
+  });
 }
 
-function toggleDetail() {
-  detailOpen = !detailOpen;
-  var panel = document.getElementById('detailPanel');
-  var btn   = document.getElementById('detailToggle');
-  if (panel) panel.classList.toggle('open', detailOpen);
-  if (btn)   btn.textContent = detailOpen ? '▲ Masquer le détail' : '▼ Voir le détail complet';
-}
-
-function editBudget() {
-  var display = document.getElementById('budgetDisplay');
-  if (!display) return;
-  var input = document.createElement('input');
-  input.type = 'number'; input.className = 'budget-edit-input'; input.value = proj().budget2;
-  input.onblur    = function() { proj().budget2 = parseFloat(input.value) || 0; renderBilan(); };
-  input.onkeydown = function(e) { if (e.key === 'Enter') input.blur(); };
-  display.replaceWith(input); input.focus();
-}
-
-function renderLockedBilan() {
-  var f = calcFinance();
-  /* Affiche la structure avec chiffres floutés */
-  document.getElementById('bilanContent').innerHTML =
-    '<div style="position:relative">' +
-      /* Carte synthèse floue */
-      '<div class="synthese-card" style="filter:blur(5px);pointer-events:none;user-select:none">' +
-        '<div class="synthese-row"><div><div class="synthese-label">Ce projet vous coûte</div><div class="synthese-sub">Missions déléguées</div></div><div class="synthese-value cost">− ••• €</div></div>' +
-        '<div class="synthese-row"><div><div class="synthese-label">Vous avez économisé</div><div class="synthese-sub">Missions faites vous-même</div></div><div class="synthese-value saving">+ ••• €</div></div>' +
-        '<div class="synthese-row"><div><div class="synthese-label">Vous avez bénéficié</div><div class="synthese-sub">Aides financières</div></div><div class="synthese-value benefit">+ ••• €</div></div>' +
-      '</div>' +
-      /* Carte trophée floue */
-      '<div class="equiv-card" style="filter:blur(5px);pointer-events:none;user-select:none;margin-top:16px">' +
-        '<div class="equiv-trophy">🏆</div>' +
-        '<div class="equiv-title">Votre gain total estimé</div>' +
-        '<div class="equiv-amount">+ ••• €</div>' +
-        '<div class="equiv-sub">Nos experts ont identifié des aides pour votre projet</div>' +
-      '</div>' +
-      /* Overlay CTA */
-      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:32px;text-align:center;background:rgba(var(--bg-rgb,247,248,252),0.7);backdrop-filter:blur(2px);border-radius:18px">' +
-        '<div style="font-size:2rem">🔒</div>' +
-        '<div style="font-family:\'Lora\',serif;font-size:20px;font-weight:600;color:var(--text)">Vos chiffres sont prêts</div>' +
-        '<div style="font-size:14px;color:var(--muted);max-width:340px">Nos experts ont calculé vos économies et aides financières. Déverrouillez pour voir le détail complet.</div>' +
-        '<button class="btn btn-primary" onclick="alert(\'Redirection vers les offres Home in Love...\')">Voir mon bilan complet →</button>' +
-        '<button class="btn btn-outline btn-sm" onclick="alert(\'Vérification partenaire...\')">💡 Mon entreprise est peut-être partenaire</button>' +
-      '</div>' +
-    '</div>';
+function switchTab(tabId) {
+  activeTab = tabId;
+  document.querySelectorAll('.dash-tab').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.tab === tabId);
+  });
+  document.querySelectorAll('.tab-pane').forEach(function(p) {
+    p.classList.toggle('active', p.id === tabId);
+  });
+  renderProject();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ONGLET MISSIONS
+   ONGLET MON PROJET (Bilan + Parcours fusionnés)
    ═══════════════════════════════════════════════════════════════════════════ */
-function renderMissions() {
-  if (!currentUser.partenaire) {
-    renderFreeMissions();
-    return;
-  }
-  renderMissionList();
-  renderMissionTimeline();
-}
-
-/* Non-partenaire : liste vide, saisie libre, CTA en bas */
-/* ── Limites freemium ── */
-var FREEMIUM_LIMITS = { missions: 5, prestataires: 3, documents: 5 };
-
-function freemiumAtLimit(type) {
-  var p = proj();
-  if (type === 'missions')     return p.missions.length >= FREEMIUM_LIMITS.missions;
-  if (type === 'prestataires') return p.prestataires.length >= FREEMIUM_LIMITS.prestataires;
-  if (type === 'documents') {
-    var total = p.documents.sections.reduce(function(acc, s){ return acc + s.items.length; }, 0);
-    return total >= FREEMIUM_LIMITS.documents;
-  }
-  return false;
-}
-
-function freemiumLimitBanner(type, current, max) {
-  var reached = current >= max;
-  return '<div class="freemium-limit-bar' + (reached ? ' reached' : '') + '">' +
-    '<span>' + (reached
-      ? '🔒 Limite atteinte (' + max + '/' + max + ') — passez à l\'offre complète pour continuer'
-      : '📊 ' + current + ' / ' + max + ' ' + type + ' utilisé' + (current > 1 ? 's' : '') + ' — limit freemium') +
-    '</span>' +
-    (reached
-      ? '<button class="btn btn-primary btn-sm" onclick="alert(\'Offres Home in Love...\')">Débloquer →</button>'
-      : '<button class="btn btn-outline btn-sm" onclick="alert(\'Offres Home in Love...\')">Voir l\'offre complète</button>') +
-  '</div>';
-}
-
-function renderFreeMissions() {
-  var content = document.getElementById('missionsContent');
-  var p = proj();
-  var max = FREEMIUM_LIMITS.missions;
-  var count = p.missions.length;
-
-  var toolbar =
-    '<div class="missions-toolbar">' +
-      '<div class="missions-count" id="missionsCount">' +
-        (count === 0 ? 'Aucune mission pour l\'instant'
-          : count + ' mission' + (count > 1 ? 's' : '') + ' ajoutée' + (count > 1 ? 's' : '')) +
-      '</div>' +
-    '</div>';
-
-  var limitBar = freemiumLimitBanner('missions', count, max);
-
-  var tableRows = count === 0
-    ? '<tr><td colspan="5" style="text-align:center;padding:40px 0;color:var(--muted);font-size:14px">' +
-        '📋 Commencez par ajouter vos premières missions ci-dessous.<br>' +
-        '<span style="font-size:12px">Nos experts en ont identifié <strong>20 à 30</strong> pour votre type de projet.</span>' +
-      '</td></tr>'
-    : p.missions.slice().sort(function(a,b){
-        return (a.date||'zz') > (b.date||'zz') ? 1 : -1;
-      }).map(function(m) {
-        var ti = MISSION_TYPES[m.type] || MISSION_TYPES['mission'];
-        return '<tr class="mission-row' + (m.done ? ' done' : '') + '">' +
-          '<td><div class="task-check ' + (m.done ? 'checked' : '') + '" onclick="toggleMission(' + m.id + ')">' + (m.done ? '✓' : '') + '</div></td>' +
-          '<td class="mission-name"><input type="text" class="mission-name-input" value="' + m.name.replace(/"/g,'&quot;') + '" onchange="changeName(' + m.id + ',this.value)"></td>' +
-          '<td><select class="type-select ' + ti.color + '" onchange="changeType(' + m.id + ',this)">' +
-            Object.keys(MISSION_TYPES).map(function(k){ return '<option value="' + k + '" ' + (m.type===k?'selected':'') + '>' + MISSION_TYPES[k].label + '</option>'; }).join('') +
-          '</select></td>' +
-          '<td><input type="date" class="date-input" value="' + (m.date || '') + '" onchange="changeDate(' + m.id + ',this.value)"></td>' +
-          '<td><button class="btn-row-delete" onclick="deleteMission(' + m.id + ')">✕</button></td>' +
-        '</tr>';
-      }).join('');
-
-  var addBtn = count < max
-    ? '<button class="btn-add-mission" onclick="addMissionFree()">＋ Ajouter une mission</button>'
-    : '<button class="btn-add-mission" style="opacity:0.4;cursor:not-allowed" disabled>＋ Limite atteinte (' + max + '/' + max + ')</button>';
-
-  var listView =
-    '<div id="listViewWrap">' +
-      '<table class="mission-table">' +
-        '<thead><tr>' +
-          '<th style="width:36px"></th><th>Mission</th><th>Type</th><th>Date prévue</th><th style="width:36px"></th>' +
-        '</tr></thead>' +
-        '<tbody id="missionBody">' + tableRows + '</tbody>' +
-      '</table>' +
-      addBtn +
-    '</div>';
-
-  var cta =
-    '<div class="missions-free-cta">' +
-      '<div class="missions-free-cta-inner">' +
-        '<div class="missions-free-cta-left">' +
-          '<div class="missions-free-cta-title">🚀 Vous manquez peut-être des étapes clés</div>' +
-          '<div class="missions-free-cta-desc">Nos experts ont une checklist complète de <strong>20 à 30 missions</strong> pour votre projet — aides financières incluses. Un appel suffit pour tout découvrir.</div>' +
-        '</div>' +
-        '<div class="missions-free-cta-actions">' +
-          '<button class="btn btn-primary" onclick="alert(\'Prise de RDV...\')">📞 Parler à un expert</button>' +
-          '<button class="btn btn-outline" onclick="alert(\'Offres...\')">Voir les offres</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-
-  content.innerHTML = toolbar + limitBar + listView + cta;
-}
-
-function addMissionFree() {
-  if (freemiumAtLimit('missions')) {
-    alert('Limite de ' + FREEMIUM_LIMITS.missions + ' missions atteinte.\nPassez à l\'offre complète pour ajouter des missions illimitées !');
-    return;
-  }
-  var name = prompt('Nom de la mission :');
-  if (!name) return;
-  var keys = Object.keys(MISSION_TYPES);
-  var tc   = prompt('Type (' + keys.join(' / ') + ') :', 'mission') || 'mission';
-  proj().missions.push({
-    id: proj().nextMissionId++,
-    name: name,
-    type: MISSION_TYPES[tc] ? tc : 'mission',
-    date: '', prix: 0,
-    delegation: 'self', delegatee: '',
-    done: false, validated: false,
-  });
-  renderFreeMissions();
-  renderProjectHeader();
-}
-
-function renderMissionList() {
-  var tbody = document.getElementById('missionBody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-
-  var sorted = proj().missions.slice().sort(function(a, b) {
-    return (a.date || 'zz') > (b.date || 'zz') ? 1 : -1;
-  });
-
-  sorted.forEach(function(m) {
-    var ti = MISSION_TYPES[m.type] || MISSION_TYPES['mission'];
-    var pc = m.type === 'subvention' ? 'price-benefit' : m.delegation === 'self' ? 'price-saving' : 'price-cost';
-    var tr = document.createElement('tr');
-    tr.className = 'mission-row' + (m.done ? ' done' : '');
-    tr.innerHTML =
-      '<td><div class="task-check ' + (m.done ? 'checked' : '') + '" onclick="toggleMission(' + m.id + ')">' + (m.done ? '✓' : '') + '</div></td>' +
-      '<td class="mission-name"><input type="text" class="mission-name-input" value="' + m.name.replace(/"/g, '&quot;') + '" onchange="changeName(' + m.id + ',this.value)" title="Cliquez pour modifier"></td>' +
-      '<td><select class="type-select ' + ti.color + '" onchange="changeType(' + m.id + ',this)">' +
-        Object.keys(MISSION_TYPES).map(function(k){ return '<option value="' + k + '" ' + (m.type === k ? 'selected' : '') + '>' + MISSION_TYPES[k].label + '</option>'; }).join('') +
-      '</select></td>' +
-      '<td><input type="date" class="date-input" value="' + (m.date || '') + '" onchange="changeDate(' + m.id + ',this.value)"></td>' +
-      '<td><select class="deleg-select" onchange="changeDeleg(' + m.id + ',this)">' +
-        '<option value="self"    ' + (m.delegation === 'self'    ? 'selected' : '') + '>✋ Je fais</option>' +
-        '<option value="timonia" ' + (m.delegation === 'timonia' ? 'selected' : '') + '>⭐ Home in Love</option>' +
-        '<option value="other"   ' + (m.delegation === 'other'   ? 'selected' : '') + '>👤 Autre</option>' +
-      '</select></td>' +
-      '<td>' +
-        '<input type="text" class="deleg-input ' + (m.delegation === 'other' ? '' : 'hidden') + '" value="' + (m.delegatee || '') + '" placeholder="Qui ?" onchange="changeDelegatee(' + m.id + ',this.value)">' +
-        (m.delegation === 'timonia' && !m.done ? '<span style="font-size:11px;color:var(--accent)">⭐ Home in Love</span>' : '') +
-        (m.delegation === 'self'    && !m.done ? '<span style="font-size:11px;color:var(--teal)">✋ Moi</span>'      : '') +
-      '</td>' +
-      '<td><input type="number" class="price-input ' + (m.validated ? 'validated' : 'estimated') + ' ' + pc + '" value="' + (m.prix || 0) + '" min="0" onchange="changePrice(' + m.id + ',this.value)" title="' + (m.validated ? 'Prix validé ✅' : 'Prix estimatif 💡') + '"></td>' +
-      '<td><button class="btn-row-delete" onclick="deleteMission(' + m.id + ')">✕</button></td>';
-    tbody.appendChild(tr);
-  });
-
-  var mc = document.getElementById('missionsCount');
-  if (mc) {
-    var t = proj().missions.length;
-    var d = proj().missions.filter(function(m){ return m.done; }).length;
-    mc.textContent = t + ' mission' + (t > 1 ? 's' : '') + ' · ' + d + ' réalisée' + (d > 1 ? 's' : '');
-  }
-}
-
-function renderMissionTimeline() {
-  var wrap = document.getElementById('timelineWrap');
+function renderTabProjet() {
+  var p   = proj();
+  var wrap = document.getElementById('projetContent');
   if (!wrap) return;
 
-  var sorted = proj().missions.slice().sort(function(a, b) {
-    return (a.date || 'zz') > (b.date || 'zz') ? 1 : -1;
+  var activePhaseIdx = p.phases.findIndex(function(ph){ return ph.status === 'active' || ph.status === 'late' || ph.status === 'locked'; });
+  if (activePhaseIdx === -1) activePhaseIdx = 0;
+
+  /* ── Barre de santé expertises ── */
+  var santeHtml = '<div class="sante-section"><div class="sante-title">Ma sécurisation immobilière</div><div class="sante-grid">';
+  Object.keys(EXPERTISES).forEach(function(key) {
+    var ex = EXPERTISES[key];
+    var active = p.expertisesActives[key];
+    var statusClass = active ? 'sante-ok' : 'sante-risk';
+    var statusLabel = active ? '✓ Validé par expert' : '⚠ Risque détecté';
+    santeHtml +=
+      '<div class="sante-card ' + statusClass + '">' +
+        '<div class="sante-icon">' + ex.icon + '</div>' +
+        '<div class="sante-label">' + ex.label + '</div>' +
+        '<div class="sante-status">' + statusLabel + '</div>' +
+        (!active ? '<button class="btn-resoudre" onclick="openExpertiseModal(\'' + key + '\')">Résoudre →</button>' : '') +
+      '</div>';
   });
+  santeHtml += '</div></div>';
 
-  var months = {};
-  sorted.forEach(function(m) {
-    var k = m.date ? m.date.slice(0, 7) : 'sans-date';
-    if (!months[k]) months[k] = [];
-    months[k].push(m);
+  /* ── Plan de route (macro) ── */
+  var planHtml = '<div class="plan-section"><div class="plan-header"><span class="plan-title">Mon Plan de Vol</span><span class="plan-step">Phase ' + (activePhaseIdx+1) + ' / ' + p.phases.length + '</span></div>';
+  planHtml += '<div class="plan-steps">';
+  p.phases.forEach(function(phase, idx) {
+    var st = PHASE_STATUS[phase.status] || PHASE_STATUS.pending;
+    var isActive = idx === activePhaseIdx;
+    planHtml +=
+      '<div class="plan-step-item' + (isActive ? ' plan-step-active' : '') + '">' +
+        '<div class="plan-step-dot" style="background:' + st.dot + ';border-color:' + st.dot + '">' +
+          (phase.status === 'done' ? '✓' : (idx+1)) +
+        '</div>' +
+        '<div class="plan-step-label">' + phase.title + '</div>' +
+      '</div>' +
+      (idx < p.phases.length-1 ? '<div class="plan-step-connector"></div>' : '');
   });
+  planHtml += '</div>';
 
-  wrap.innerHTML = '';
-  Object.keys(months).forEach(function(month) {
-    var missions = months[month];
-    var div      = document.createElement('div');
-    div.className= 'timeline-month';
-    var label    = month === 'sans-date'
-      ? 'Sans date planifiée'
-      : new Date(month + '-01').toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
-    div.innerHTML = '<div class="timeline-month-label">' + label + '</div>';
+  /* Action requise si phase active bloquée */
+  var activePhase = p.phases[activePhaseIdx];
+  if (activePhase && activePhase.status === 'locked') {
+    planHtml += '<div class="plan-alert"><div class="plan-alert-text"><strong>Projet non sécurisé :</strong> Activez une expertise pour débloquer cette phase et sécuriser votre projet.</div><button class="btn-debloquer" onclick="openExpertiseModal(\'financier\')">Activer une Expertise →</button></div>';
+  } else if (activePhase) {
+    var nextMission = null;
+    activePhase.missions.forEach(function(m){ if (!nextMission && m.statut !== 'done') nextMission = m; });
+    if (nextMission) {
+      planHtml += '<div class="plan-action"><div class="plan-action-text"><strong>Action requise :</strong> ' + nextMission.title + '</div><button class="btn-debloquer" onclick="switchTab(\'tab-projet\')">Voir le détail →</button></div>';
+    }
+  }
+  planHtml += '</div>';
 
-    missions.forEach(function(m, i) {
-      var dc = m.type==='subvention' ? 'var(--green)' : m.type==='aide' ? 'var(--gold)' : m.delegation==='timonia' ? 'var(--accent)' : m.delegation==='self' ? 'var(--teal)' : 'var(--purple)';
-      var dl = m.delegation==='timonia' ? '⭐ Home in Love' : m.delegation==='self' ? '✋ Moi' : '👤 ' + (m.delegatee || 'Autre');
-      var ti = MISSION_TYPES[m.type] || MISSION_TYPES['mission'];
-      div.innerHTML +=
-        '<div class="timeline-item">' +
-          '<div class="tl-dot-col">' +
-            '<div class="tl-dot" style="background:' + dc + ';' + (m.done ? 'opacity:0.4' : '') + '"></div>' +
-            (i < missions.length - 1 ? '<div class="tl-line"></div>' : '') +
+  /* ── Timeline Parcours (7 phases avec sous-missions) ── */
+  var timelineHtml = '<div class="timeline-section"><div class="timeline-title">Parcours détaillé</div>';
+  p.phases.forEach(function(phase, phIdx) {
+    var st = PHASE_STATUS[phase.status] || PHASE_STATUS.pending;
+    var isLocked = phase.status === 'locked';
+
+    timelineHtml +=
+      '<div class="tl-phase' + (isLocked ? ' tl-phase-locked' : '') + '">' +
+        '<div class="tl-phase-header">' +
+          '<div class="tl-phase-dot" style="background:' + st.dot + '"></div>' +
+          '<div class="tl-phase-info">' +
+            '<div class="tl-phase-id">' + phase.id + '</div>' +
+            '<div class="tl-phase-title">' + phase.title + '</div>' +
+            '<div class="tl-phase-deadline">Échéance : ' + fmtDate(phase.deadline) + '</div>' +
           '</div>' +
-          '<div class="tl-card" style="' + (m.done ? 'opacity:0.55' : '') + '">' +
-            '<div class="tl-card-title" style="' + (m.done ? 'text-decoration:line-through;color:var(--muted)' : '') + '">' + (m.done ? '✓ ' : '') + m.name + '</div>' +
-            '<div class="tl-card-meta">' +
-              '<span>' + fmtDate(m.date) + '</span>' +
-              '<span style="color:' + dc + '">' + dl + '</span>' +
-              '<span class="type-badge ' + ti.color + '" style="font-size:10px">' + ti.label + '</span>' +
-              (m.prix > 0 ? '<span style="font-weight:700">' + m.prix.toLocaleString('fr-FR') + ' €</span>' : '') +
-            '</div>' +
-          '</div>' +
+          '<div class="tl-phase-badge" style="background:' + st.bg + ';color:' + st.color + '">' + st.label + '</div>' +
         '</div>';
-    });
-    wrap.appendChild(div);
-  });
-}
 
-function switchView(view) {
-  document.getElementById('listViewWrap').style.display = view === 'list' ? 'block' : 'none';
-  var tl = document.getElementById('timelineWrap');
-  if (tl) tl.className = 'timeline-wrap' + (view === 'timeline' ? ' active' : '');
-  document.getElementById('viewListBtn').classList.toggle('active', view === 'list');
-  document.getElementById('viewTlBtn').classList.toggle('active', view === 'timeline');
-}
-
-/* Actions missions */
-function toggleMission(id) {
-  var m = proj().missions.find(function(x){ return x.id === id; });
-  if (m) { m.done = !m.done; renderMissionList(); renderMissionTimeline(); renderBilan(); renderProjectHeader(); }
-}
-function changeDate(id, val) {
-  var m = proj().missions.find(function(x){ return x.id === id; });
-  if (m) { m.date = val; renderMissionTimeline(); }
-}
-function changeDeleg(id, sel) {
-  var m = proj().missions.find(function(x){ return x.id === id; });
-  if (m) { m.delegation = sel.value; renderMissionList(); renderBilan(); }
-}
-function changeDelegatee(id, val) {
-  var m = proj().missions.find(function(x){ return x.id === id; });
-  if (m) m.delegatee = val;
-}
-function changePrice(id, val) {
-  var m = proj().missions.find(function(x){ return x.id === id; });
-  if (m) { m.prix = parseFloat(val) || 0; m.validated = true; renderBilan(); }
-}
-
-function changeName(id, val) {
-  var m = proj().missions.find(function(x){ return x.id === id; });
-  if (m && val.trim()) { m.name = val.trim(); renderMissionTimeline(); }
-}
-function changeType(id, sel) {
-  var m = proj().missions.find(function(x){ return x.id === id; });
-  if (m) {
-    m.type = sel.value;
-    /* Met à jour la couleur du select */
-    var ti = MISSION_TYPES[sel.value] || MISSION_TYPES['mission'];
-    sel.className = 'type-select ' + ti.color;
-    renderBilan();
-  }
-}
-
-function deleteMission(id) {
-  proj().missions = proj().missions.filter(function(x){ return x.id !== id; });
-  renderMissionList(); renderMissionTimeline(); renderBilan(); renderProjectHeader();
-}
-function addMission() {
-  var name = prompt('Nom de la mission :'); if (!name) return;
-  var keys = Object.keys(MISSION_TYPES);
-  var tc   = prompt('Type (' + keys.join(' / ') + ') :', 'mission') || 'mission';
-  var prix = parseFloat(prompt('Prix estimatif (€) :', '0')) || 0;
-  proj().missions.push({
-    id: proj().nextMissionId++, name: name,
-    type: MISSION_TYPES[tc] ? tc : 'mission',
-    date: '', prix: prix,
-    delegation: prix > 0 ? 'timonia' : 'self',
-    delegatee: '', done: false, validated: false,
-  });
-  renderMissionList(); renderMissionTimeline(); renderBilan(); renderProjectHeader();
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   BOUTONS EN-TÊTE — EXPERT & TOUT DÉLÉGUER
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* Annuaire des experts par entreprise partenaire */
-var EXPERTS = {
-  'Orange':            { nom:'Claire Dupont',    tel:'06 12 34 56 78', specialite:'Recherche locative & achat', avatar:'CD' },
-  'Société Générale':  { nom:'Marc Lefevre',     tel:'06 23 45 67 89', specialite:'Financement & achat immobilier', avatar:'ML' },
-  'SNCF':              { nom:'Sophie Arnaud',    tel:'06 34 56 78 90', specialite:'Mise en location & gestion', avatar:'SA' },
-  'Airbus':            { nom:'Thomas Renard',    tel:'06 45 67 89 01', specialite:'Vente & transaction', avatar:'TR' },
-  'EDF':               { nom:'Julie Martin',     tel:'06 56 78 90 12', specialite:'Rénovation énergétique & aides', avatar:'JM' },
-};
-var EXPERT_DEFAULT = { nom:'Équipe Home in Love',  tel:'01 XX XX XX XX', specialite:'Accompagnement immobilier', avatar:'⭐' };
-
-function openExpertModal() {
-  var expert = (currentUser.entreprise && EXPERTS[currentUser.entreprise]) ? EXPERTS[currentUser.entreprise] : EXPERT_DEFAULT;
-  var isPartner = currentUser.partenaire;
-
-  var m = document.createElement('div');
-  m.className = 'modal-bg'; m.id = 'expertModal';
-  m.innerHTML =
-    '<div class="modal-box" style="max-width:380px;text-align:center">' +
-      '<button class="modal-close" onclick="closeModal(\'expertModal\')" style="position:absolute;top:16px;right:16px">✕</button>' +
-      '<div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--teal));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;margin:0 auto 16px">' + expert.avatar + '</div>' +
-      '<div style="font-family:\'Lora\',serif;font-size:20px;font-weight:600;margin-bottom:4px">' + expert.nom + '</div>' +
-      '<div style="font-size:13px;color:var(--muted);margin-bottom:20px">' + expert.specialite + '</div>' +
-      (isPartner
-        ? '<a href="tel:' + expert.tel.replace(/\s/g,'') + '" class="btn btn-primary w-full" style="display:block;text-decoration:none;margin-bottom:10px">📞 Appeler — ' + expert.tel + '</a>'
-        : '<div style="font-size:13px;color:var(--muted);padding:14px;background:var(--surf2);border-radius:10px;margin-bottom:10px">📞 Numéro disponible avec l\'accompagnement Home in Love</div>') +
-      '<button class="btn btn-outline w-full" onclick="closeModal(\'expertModal\')">Fermer</button>' +
-      (isPartner ? '<div style="font-size:11px;color:var(--muted);margin-top:12px">Expert dédié à ' + (currentUser.entreprise || 'votre entreprise') + '</div>' : '') +
-    '</div>';
-  document.body.appendChild(m);
-  m.addEventListener('click', function(e){ if (e.target === m) closeModal('expertModal'); });
-}
-
-function openDeleguerModal() {
-  var missions = proj().missions.filter(function(m){ return !m.done && m.delegation !== 'timonia'; });
-  var total    = missions.reduce(function(acc, m){ return acc + (m.prix || 0); }, 0);
-
-  var m = document.createElement('div');
-  m.className = 'modal-bg'; m.id = 'deleguerModal';
-  m.innerHTML =
-    '<div class="modal-box" style="max-width:440px">' +
-      '<div class="modal-header">' +
-        '<div><div class="modal-title">🤝 Tout déléguer à Home in Love</div><div class="modal-sub">Home in Love prend en charge toutes vos missions restantes</div></div>' +
-        '<button class="modal-close" onclick="closeModal(\'deleguerModal\')">✕</button>' +
-      '</div>' +
-      '<div style="padding:20px">' +
-        '<div style="background:var(--surf2);border-radius:12px;padding:16px;margin-bottom:20px">' +
-          '<div style="display:flex;justify-content:space-between;margin-bottom:8px">' +
-            '<span style="font-size:13px;color:var(--muted)">Missions à déléguer</span>' +
-            '<span style="font-weight:700">' + missions.length + ' mission' + (missions.length > 1 ? 's' : '') + '</span>' +
-          '</div>' +
-          '<div style="display:flex;justify-content:space-between">' +
-            '<span style="font-size:13px;color:var(--muted)">Coût estimé total</span>' +
-            '<span style="font-weight:700;color:var(--accent)">' + total.toLocaleString('fr-FR') + ' €</span>' +
-          '</div>' +
-        '</div>' +
-        '<div style="font-size:13px;color:var(--muted);margin-bottom:20px">⚠️ Toutes les missions non réalisées seront basculées vers Home in Love. Vous pourrez les modifier individuellement ensuite.</div>' +
-        '<button class="btn btn-primary w-full" onclick="confirmDeleguerAll()" style="margin-bottom:10px">Confirmer la délégation →</button>' +
-        '<button class="btn btn-outline w-full" onclick="closeModal(\'deleguerModal\')">Annuler</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(m);
-  m.addEventListener('click', function(e){ if (e.target === m) closeModal('deleguerModal'); });
-}
-
-function confirmDeleguerAll() {
-  proj().missions.forEach(function(m) {
-    if (!m.done) { m.delegation = 'timonia'; m.delegatee = ''; }
-  });
-  closeModal('deleguerModal');
-  renderMissionList();
-  renderMissionTimeline();
-  renderBilan();
-  renderProjectHeader();
-  /* Petit feedback visuel */
-  var banner = document.createElement('div');
-  banner.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 4px 20px rgba(30,99,240,0.3)';
-  banner.textContent = '✅ Toutes les missions ont été déléguées à Home in Love';
-  document.body.appendChild(banner);
-  setTimeout(function(){ banner.remove(); }, 3000);
-}
-
-function closeModal(id) {
-  var m = document.getElementById(id);
-  if (m) m.remove();
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   ONGLET PRESTATAIRES
-   ═══════════════════════════════════════════════════════════════════════════ */
-function renderPrestataires() {
-  var wrap = document.getElementById('prestContent');
-  if (!wrap) return;
-  if (!currentUser.partenaire) {
-    var p     = proj();
-    var max   = FREEMIUM_LIMITS.prestataires;
-    var count = p.prestataires.length;
-    wrap.innerHTML = '<div class="prest-grid" id="prestGrid"></div>' + freemiumLimitBanner('prestataires', count, max);
-    var g = document.getElementById('prestGrid');
-    p.prestataires.forEach(function(pr) {
-      var card = document.createElement('div'); card.className = 'prest-card';
-      card.innerHTML =
-        '<div class="prest-card-header"><div class="prest-avatar ' + pr.type + '">' + pr.avatar + '</div>' +
-        '<div><div class="prest-name">' + pr.nom + '</div><div class="prest-type">' + pr.specialite + '</div></div></div>' +
-        '<div class="prest-contacts"><div class="prest-contact">📧 ' + pr.email + '</div><div class="prest-contact">📞 ' + pr.tel + '</div></div>' +
-        '<div class="prest-missions">Missions : ' + pr.missions.join(' · ') + '</div>';
-      g.appendChild(card);
-    });
-    if (count < max) {
-      var ab = document.createElement('button'); ab.className = 'btn-add-prest';
-      ab.innerHTML = '<div style="font-size:1.5rem">＋</div><div>Ajouter un prestataire</div>';
-      ab.onclick = function() { alert('Formulaire ajout prestataire — à développer'); };
-      g.appendChild(ab);
+    if (isLocked) {
+      timelineHtml += '<div class="tl-locked-msg">⚠ Phase non sécurisée — activez une expertise pour débloquer cette phase.<button class="btn-inline-expertise" onclick="openExpertiseModal(\'financier\')">Activer une Expertise — 590€</button></div>';
     } else {
-      var lb = document.createElement('div');
-      lb.className = 'prest-locked-card';
-      lb.innerHTML = '<div style="font-size:1.5rem">🔒</div><div style="font-weight:700;margin-bottom:4px">Limite atteinte</div><div style="font-size:12px;color:var(--muted)">Ajoutez jusqu\'à 20 prestataires avec l\'accompagnement Home in Love</div><button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="alert(\'Offres...\')">Débloquer →</button>';
-      g.appendChild(lb);
+      /* Sous-missions */
+      timelineHtml += '<div class="tl-missions">';
+      phase.missions.forEach(function(m) {
+        var mSt = PHASE_STATUS[m.statut] || PHASE_STATUS.pending;
+        var respClass = m.responsable === 'Moi' ? 'resp-moi' : (m.responsable === 'Cabinet' ? 'resp-cabinet' : 'resp-presta');
+        timelineHtml +=
+          '<div class="tl-mission">' +
+            '<div class="tl-mission-dot" style="background:' + mSt.dot + '"></div>' +
+            '<div class="tl-mission-body">' +
+              '<div class="tl-mission-title">' + m.title + '</div>' +
+              '<div class="tl-mission-meta">' +
+                '<span class="tl-resp ' + respClass + '">' + m.responsable + '</span>' +
+                '<span class="tl-deadline">📅 ' + fmtDate(m.deadline) + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="tl-mission-status" style="color:' + mSt.color + '">' + mSt.label + '</div>' +
+          '</div>';
+      });
+      timelineHtml += '</div>';
     }
-    return;
-  }
-  wrap.innerHTML = '<div class="prest-grid" id="prestGrid"></div>';
-  var g = document.getElementById('prestGrid');
 
-  proj().prestataires.forEach(function(p) {
-    var card = document.createElement('div');
-    card.className = 'prest-card';
-    card.innerHTML =
-      '<div class="prest-card-header">' +
-        '<div class="prest-avatar ' + p.type + '">' + p.avatar + '</div>' +
-        '<div><div class="prest-name">' + p.nom + '</div><div class="prest-type">' + p.specialite + '</div></div>' +
-      '</div>' +
-      '<div class="prest-contacts">' +
-        '<div class="prest-contact">📧 <a href="mailto:' + p.email + '">' + p.email + '</a></div>' +
-        '<div class="prest-contact">📞 ' + p.tel + '</div>' +
-      '</div>' +
-      '<div class="prest-finance">' +
-        '<div class="prest-finance-item"><div class="prest-finance-label">Coût engagé</div><div class="prest-finance-value" style="color:var(--red)">' + p.coutEngage.toLocaleString('fr-FR') + ' €</div></div>' +
-        '<div class="prest-finance-item"><div class="prest-finance-label">Prévisionnel</div><div class="prest-finance-value" style="color:var(--accent)">' + p.coutPrev.toLocaleString('fr-FR') + ' €</div></div>' +
-      '</div>' +
-      '<div class="prest-missions">Missions : ' + p.missions.join(' · ') + '</div>';
-    g.appendChild(card);
+    /* CTA Expertise si phase en a */
+    if (phase.expertises && phase.expertises.length && !isLocked) {
+      timelineHtml += '<div class="tl-expertises">';
+      phase.expertises.forEach(function(eKey) {
+        var ex = EXPERTISES[eKey];
+        var isActive = p.expertisesActives[eKey];
+        if (!isActive) {
+          timelineHtml += '<button class="btn-expertise-cta" onclick="openExpertiseModal(\'' + eKey + '\')">' + ex.icon + ' Activer ' + ex.label + ' — ' + ex.prix + '€</button>';
+        } else {
+          timelineHtml += '<span class="expertise-active-badge">' + ex.icon + ' ' + ex.label + ' — Activée ✓</span>';
+        }
+      });
+      timelineHtml += '</div>';
+    }
+
+    /* Bouton ajouter une sous-mission */
+    if (!isLocked) {
+      timelineHtml += '<button class="btn-add-mission" onclick="addMission(\'' + phase.id + '\')">＋ Suggérer une mission</button>';
+    }
+
+    timelineHtml += '</div>';
   });
 
-  var ab = document.createElement('button');
-  ab.className = 'btn-add-prest';
-  ab.innerHTML = '<div style="font-size:1.5rem">＋</div><div>Ajouter un prestataire</div>';
-  ab.onclick   = function() { alert('Formulaire ajout prestataire — à développer'); };
-  g.appendChild(ab);
+  /* CTA Délégation Totale (à partir de P3) */
+  var doneCount = p.phases.filter(function(ph){ return ph.status === 'done'; }).length;
+  if (doneCount >= 2 && p.offre !== 'delegation') {
+    timelineHtml += '<div class="delegation-cta-block"><div class="delegation-cta-title">Vous préférez tout déléguer ?</div><div class="delegation-cta-sub">Confiez l\'exécution complète à Home in Love. Honoraires au résultat — 3% du montant.</div><button class="btn-delegation" onclick="openDeleguerModal()">→ Activer la Délégation Totale</button></div>';
+  }
+
+  timelineHtml += '</div>';
+
+  wrap.innerHTML = santeHtml + planHtml + timelineHtml;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ONGLET DOCUMENTS
    ═══════════════════════════════════════════════════════════════════════════ */
-function renderDocuments() {
+function renderTabDocuments() {
+  var p    = proj();
   var wrap = document.getElementById('docsContent');
   if (!wrap) return;
-  if (!currentUser.partenaire) {
-    var p     = proj();
-    var max   = FREEMIUM_LIMITS.documents;
-    var total = p.documents.sections.reduce(function(acc,s){ return acc + s.items.length; }, 0);
-    wrap.innerHTML = '';
 
-    var SC = {
-      todo:    { icon:'⬜', label:'À fournir',  cls:'doc-status-todo'    },
-      waiting: { icon:'⏳', label:'En attente', cls:'doc-status-waiting' },
-      done:    { icon:'✅', label:'Reçu',       cls:'doc-status-done'    },
-    };
-
-    /* Affiche jusqu'à max documents au total */
-    var shown = 0;
-    p.documents.sections.forEach(function(section) {
-      if (shown >= max) return;
-      var visibleItems = section.items.slice(0, max - shown);
-      shown += visibleItems.length;
-
-      var div = document.createElement('div'); div.className = 'doc-section';
-      div.innerHTML = '<div class="doc-section-title">' + section.title + '</div><div class="doc-list"></div>';
-      wrap.appendChild(div);
-      var list = div.querySelector('.doc-list');
-      visibleItems.forEach(function(doc) {
-        var cfg = SC[doc.status] || SC.todo;
-        var item = document.createElement('div'); item.className = 'doc-item';
-        item.innerHTML =
-          '<div class="doc-item-status ' + cfg.cls + '">' + cfg.icon + '</div>' +
-          '<div class="doc-item-name">' + doc.name + '</div>' +
-          '<div class="doc-item-actions">' +
-            '<button class="doc-action-btn" onclick="cycleDocStatus(\'' + section.title.replace(/'/g,"\\'") + '\',' + doc.id + ')">' + cfg.label + '</button>' +
-          '</div>';
-        list.appendChild(item);
-      });
-    });
-
-    /* Barre de limite */
-    var lb = document.createElement('div');
-    lb.innerHTML = freemiumLimitBanner('documents', Math.min(total, max), max);
-    wrap.appendChild(lb);
-
-    if (total >= max) {
-      var lockedDiv = document.createElement('div');
-      lockedDiv.className = 'locked-cta'; lockedDiv.style.marginTop = '16px';
-      lockedDiv.innerHTML =
-        '<div class="locked-icon">🔒</div>' +
-        '<div class="locked-title">Débloquez la checklist complète</div>' +
-        '<div class="locked-desc">Avec l\'accompagnement Home in Love, accédez à la checklist documentaire complète et au suivi de chaque pièce.</div>' +
-        '<button class="btn btn-primary" onclick="alert(\'Offres...\')">Voir l\'offre complète →</button>';
-      wrap.appendChild(lockedDiv);
-    }
-    return;
-  }
-  wrap.innerHTML = '';
-
-  var SC = {
-    todo:    { icon:'⬜', label:'À fournir',  cls:'doc-status-todo'    },
-    waiting: { icon:'⏳', label:'En attente', cls:'doc-status-waiting' },
-    done:    { icon:'✅', label:'Reçu',       cls:'doc-status-done'    },
-  };
-
-  proj().documents.sections.forEach(function(section) {
-    var div = document.createElement('div');
-    div.className = 'doc-section';
-    div.innerHTML = '<div class="doc-section-title">' + section.title + '</div><div class="doc-list"></div>';
-    wrap.appendChild(div);
-    var list = div.querySelector('.doc-list');
-
-    section.items.forEach(function(doc) {
-      var cfg  = SC[doc.status] || SC.todo;
-      var item = document.createElement('div');
-      item.className = 'doc-item';
-      item.innerHTML =
-        '<div class="doc-item-status ' + cfg.cls + '" title="' + cfg.label + '">' + cfg.icon + '</div>' +
-        '<div class="doc-item-name">' + doc.name + '</div>' +
-        '<div class="doc-item-actions">' +
-          '<button class="doc-action-btn" onclick="cycleDocStatus(\'' + section.title.replace(/'/g, "\\'") + '\',' + doc.id + ')">' + cfg.label + '</button>' +
-          '<button class="doc-action-btn" onclick="alert(\'Upload...\')">📎</button>' +
-          '<button class="doc-action-btn danger" onclick="deleteDoc(\'' + section.title.replace(/'/g, "\\'") + '\',' + doc.id + ')">✕</button>' +
-        '</div>';
-      list.appendChild(item);
-    });
-  });
-
-  /* Zone upload */
-  var ud = document.createElement('div');
-  ud.innerHTML =
-    '<div class="doc-section">' +
-      '<div class="doc-section-title">Documents uploadés</div>' +
-      '<button class="btn-add-prest" style="width:100%;margin-top:0" onclick="document.getElementById(\'fileInput\').click()">' +
-        '<div style="font-size:1.5rem">📎</div><div>Ajouter un document</div>' +
-      '</button>' +
-      '<input type="file" id="fileInput" style="display:none" onchange="handleUpload(event)">' +
-      '<div id="uploadedList" style="margin-top:12px;display:flex;flex-direction:column;gap:6px"></div>' +
+  var html =
+    '<div class="docs-header-banner">' +
+      '<div class="docs-banner-title">📁 Votre coffre-fort de documents</div>' +
+      '<div class="docs-banner-text">Cet espace constitue votre <strong>Carnet d\'Information Logement (CIL)</strong>, rendu obligatoire par les articles L126-35-2 et suivants du Code de la construction et de l\'habitation. Conservez ici tous les documents essentiels à votre projet — ils seront transmissibles lors de toute future transaction.</div>' +
     '</div>';
-  wrap.appendChild(ud);
-  renderUploadedDocs();
-}
 
-function cycleDocStatus(sectionTitle, docId) {
-  var statuses = ['todo', 'waiting', 'done'];
-  var section  = proj().documents.sections.find(function(s){ return s.title === sectionTitle; });
-  var doc      = section && section.items.find(function(d){ return d.id === docId; });
-  if (doc) { var idx = statuses.indexOf(doc.status); doc.status = statuses[(idx + 1) % statuses.length]; renderDocuments(); }
-}
-function deleteDoc(sectionTitle, docId) {
-  var section = proj().documents.sections.find(function(s){ return s.title === sectionTitle; });
-  if (section) { section.items = section.items.filter(function(d){ return d.id !== docId; }); renderDocuments(); }
-}
-function handleUpload(event) {
-  var file = event.target.files[0]; if (!file) return;
-  proj().documents.uploaded.push({ name: file.name, date: new Date().toLocaleDateString('fr-FR') });
-  renderUploadedDocs(); event.target.value = '';
-}
-function renderUploadedDocs() {
-  var list = document.getElementById('uploadedList'); if (!list) return;
-  list.innerHTML = '';
-  var icons = { pdf:'📄', xlsx:'📊', xls:'📊', doc:'📝', docx:'📝', jpg:'🖼', png:'🖼', jpeg:'🖼' };
-  proj().documents.uploaded.forEach(function(doc) {
-    var ext = doc.name.split('.').pop().toLowerCase();
-    var div = document.createElement('div'); div.className = 'doc-item';
-    div.innerHTML = '<div style="font-size:1.2rem">' + (icons[ext] || '📎') + '</div><div class="doc-item-name">' + doc.name + '</div><div class="doc-item-actions"><span style="font-size:11px;color:var(--muted)">' + doc.date + '</span></div>';
-    list.appendChild(div);
+  p.documents.forEach(function(section) {
+    html += '<div class="docs-section"><div class="docs-section-title">' + section.section + '</div>';
+    section.docs.forEach(function(doc) {
+      var isRecu = doc.statut === 'recu';
+      html +=
+        '<div class="doc-row">' +
+          '<span class="doc-check">' + (isRecu ? '✅' : '⏳') + '</span>' +
+          '<span class="doc-label">' + doc.label + '</span>' +
+          '<div class="doc-actions">' +
+            '<span class="doc-status ' + (isRecu ? 'doc-recu' : 'doc-attente') + '">' + (isRecu ? 'Reçu' : 'En attente') + '</span>' +
+            '<button class="doc-btn-upload" title="Uploader">📎</button>' +
+            '<button class="doc-btn-del" title="Supprimer">✕</button>' +
+          '</div>' +
+        '</div>';
+    });
+    html += '</div>';
   });
+
+  html +=
+    '<div class="docs-upload-zone" onclick="document.getElementById(\'fileInput\').click()">' +
+      '<div class="docs-upload-icon">📎</div>' +
+      '<div class="docs-upload-label">Ajouter un document</div>' +
+      '<input type="file" id="fileInput" style="display:none" multiple>' +
+    '</div>';
+
+  wrap.innerHTML = html;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ONGLET NOTES
+   ONGLET PRESTATAIRES
    ═══════════════════════════════════════════════════════════════════════════ */
-function renderNotes() {
-  var list = document.getElementById('notesList'); if (!list) return;
-  list.innerHTML = '';
-  if (proj().notes.length === 0) {
-    list.innerHTML = '<div class="notes-empty">📝 Aucune note pour l\'instant.<br>Commencez à noter vos observations !</div>';
-    return;
+function renderTabPrestataires() {
+  var p    = proj();
+  var wrap = document.getElementById('prestContent');
+  if (!wrap) return;
+
+  var html = '<div class="prest-grid">';
+
+  /* Prestataires réels */
+  p.prestataires.forEach(function(pr) {
+    html +=
+      '<div class="prest-card">' +
+        '<div class="prest-header">' +
+          '<div class="prest-avatar">' + (pr.isHIL ? '⭐' : '🏢') + '</div>' +
+          '<div>' +
+            '<div class="prest-name">' + pr.nom + '</div>' +
+            '<div class="prest-specialite">' + pr.specialite + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="prest-contact">' +
+          '<div>✉ ' + pr.email + '</div>' +
+          '<div>📞 ' + pr.tel + '</div>' +
+        '</div>' +
+        '<div class="prest-costs">' +
+          '<div class="prest-cost-item"><div class="prest-cost-label">Coût engagé</div><div class="prest-cost-value engage">' + pr.coutEngage.toLocaleString('fr-FR') + ' €</div></div>' +
+          '<div class="prest-cost-item"><div class="prest-cost-label">Prévisionnel</div><div class="prest-cost-value prev">' + pr.coutPrev.toLocaleString('fr-FR') + ' €</div></div>' +
+        '</div>' +
+      '</div>';
+  });
+
+  /* Cards Expertises HIL (upsell) */
+  Object.keys(EXPERTISES).forEach(function(key) {
+    var ex = EXPERTISES[key];
+    var isActive = p.expertisesActives[key];
+    if (!isActive) {
+      html +=
+        '<div class="prest-card prest-card-expertise">' +
+          '<div class="prest-header">' +
+            '<div class="prest-avatar">⭐</div>' +
+            '<div>' +
+              '<div class="prest-name">Home in Love</div>' +
+              '<div class="prest-specialite">Accompagnement immobilier</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="prest-expertise-badge">' +
+            '<span class="expertise-icon">' + ex.icon + '</span>' +
+            '<div>' +
+              '<div class="expertise-name">' + ex.label + '</div>' +
+              '<div class="expertise-slogan">"' + ex.slogan + '"</div>' +
+            '</div>' +
+          '</div>' +
+          '<button class="btn-activer-expertise" onclick="openExpertiseModal(\'' + key + '\')">' +
+            'Activer — ' + ex.prix + ' €' +
+          '</button>' +
+        '</div>';
+    }
+  });
+
+  /* Card ajouter prestataire */
+  html +=
+    '<div class="prest-card prest-card-add" onclick="addPrestataire()">' +
+      '<div class="prest-add-icon">＋</div>' +
+      '<div class="prest-add-label">Ajouter un prestataire</div>' +
+    '</div>';
+
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ONGLET MESSAGERIE
+   ═══════════════════════════════════════════════════════════════════════════ */
+function renderTabMessagerie() {
+  var p    = proj();
+  var wrap = document.getElementById('msgContent');
+  if (!wrap) return;
+
+  var msgs = msgMode === 'public' ? p.messages : p.notesPrivees;
+
+  var html =
+    '<div class="msg-toggle-row">' +
+      '<button class="msg-toggle ' + (msgMode === 'public' ? 'active' : '') + '" onclick="switchMsgMode(\'public\')">💬 Messagerie</button>' +
+      '<button class="msg-toggle ' + (msgMode === 'prive' ? 'active' : '') + '" onclick="switchMsgMode(\'prive\')">🔒 Notes privées</button>' +
+    '</div>' +
+    '<div class="msg-input-row">' +
+      '<textarea class="msg-textarea" id="msgInput" placeholder="' + (msgMode === 'public' ? 'Écrivez un message à votre expert…' : 'Écrivez une note personnelle… (visible par vous uniquement)') + '" rows="3"></textarea>' +
+      '<button class="btn-add-msg" onclick="addMessage()">＋ Ajouter</button>' +
+    '</div>' +
+    '<div class="msg-list">';
+
+  if (msgs.length === 0) {
+    html += '<div class="msg-empty">Aucun message pour l\'instant.</div>';
+  } else {
+    msgs.slice().reverse().forEach(function(m) {
+      html +=
+        '<div class="msg-item">' +
+          '<div class="msg-meta">' +
+            '<span class="msg-date">📅 ' + fmtDateTime(m.date) + '</span>' +
+            (m.auteur ? '<span class="msg-auteur">' + m.auteur + '</span>' : '') +
+          '</div>' +
+          '<div class="msg-text">' + m.texte + '</div>' +
+          '<button class="msg-del" onclick="deleteMessage(' + m.id + ')">✕</button>' +
+        '</div>';
+    });
   }
-  var sorted = proj().notes.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-  sorted.forEach(function(note) {
-    var card = document.createElement('div'); card.className = 'note-card anim-in';
-    card.innerHTML =
-      '<div class="note-header">' +
-        '<div class="note-timestamp">🕐 ' + fmtDateTime(note.date) + '</div>' +
-        '<button class="note-delete" onclick="deleteNote(' + note.id + ')">✕</button>' +
-      '</div>' +
-      '<div class="note-text">' + escHtml(note.text) + '</div>';
-    list.appendChild(card);
-  });
+
+  html += '</div>';
+  wrap.innerHTML = html;
 }
 
-function addNote() {
-  var ta   = document.getElementById('noteInput');
-  var text = ta.value.trim(); if (!text) return;
-  proj().notes.push({ id: proj().nextNoteId++, text: text, date: new Date().toISOString() });
-  ta.value = ''; renderNotes();
-}
-function deleteNote(id) {
-  proj().notes = proj().notes.filter(function(n){ return n.id !== id; });
-  renderNotes();
+function switchMsgMode(mode) {
+  msgMode = mode;
+  renderTabMessagerie();
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   UTILITAIRES
-   ═══════════════════════════════════════════════════════════════════════════ */
-function fmtDeadline(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+function addMessage() {
+  var input = document.getElementById('msgInput');
+  if (!input || !input.value.trim()) return;
+  var p = proj();
+  var msg = {
+    id: p.nextMsgId++,
+    texte: input.value.trim(),
+    date: new Date().toISOString(),
+    auteur: 'Moi',
+  };
+  if (msgMode === 'public') {
+    p.messages.push(msg);
+  } else {
+    p.notesPrivees.push(msg);
+  }
+  renderTabMessagerie();
 }
-function fmtDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
+
+function deleteMessage(id) {
+  var p = proj();
+  if (msgMode === 'public') {
+    p.messages = p.messages.filter(function(m){ return m.id !== id; });
+  } else {
+    p.notesPrivees = p.notesPrivees.filter(function(m){ return m.id !== id; });
+  }
+  renderTabMessagerie();
 }
-function fmtDateTime(d) {
-  var date = new Date(d);
-  return date.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' })
-    + ' à ' + date.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MODALS
+   ───────────────────────────────────────────────────────────────────────── */
+function openExpertiseModal(key) {
+  var ex = EXPERTISES[key];
+  if (!ex) return;
+  var modal = document.getElementById('expertiseModal');
+  if (!modal) return;
+  document.getElementById('expertiseModalIcon').textContent  = ex.icon;
+  document.getElementById('expertiseModalTitle').textContent = ex.label + ' Détectée';
+  document.getElementById('expertiseModalDesc').textContent  = 'Notre expert a identifié un point de vigilance sur votre dossier. Activez l\'' + ex.label + ' pour une analyse complète et une levée de risque garantie.';
+  document.getElementById('expertiseModalPrix').textContent  = ex.prix + ' €';
+  document.getElementById('expertiseModalBtn').onclick = function() { activerExpertise(key); };
+  modal.classList.add('open');
 }
-function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function activerExpertise(key) {
+  proj().expertisesActives[key] = true;
+  closeModal('expertiseModal');
+  renderProject();
 }
-/* ═══════════════════════════════════════════════════════════════════════════
-   MODAL — APPELER MON EXPERT
-   ═══════════════════════════════════════════════════════════════════════════ */
-/* Experts rattachés à chaque entreprise partenaire (démo) */
-var EXPERTS_MAP = {
-  'Orange':           { nom:'Camille Rousseau',  tel:'06 12 34 56 78', avatar:'CR', specialite:'Recherche Location & Achat' },
-  'Société Générale': { nom:'Marc Lefebvre',     tel:'06 23 45 67 89', avatar:'ML', specialite:'Achat & Financement' },
-  'SNCF':             { nom:'Isabelle Garnier',  tel:'06 34 56 78 90', avatar:'IG', specialite:'Mise en Location & Gestion' },
-  'Airbus':           { nom:'Nicolas Fontaine',  tel:'06 45 67 89 01', avatar:'NF', specialite:'Vente & Négociation' },
-  'EDF':              { nom:'Sophie Durand',     tel:'06 56 78 90 12', avatar:'SD', specialite:'Rénovation & Aides' },
-};
-var EXPERT_DEFAULT = { nom:'Équipe Home in Love', tel:'01 XX XX XX XX', avatar:'TM', specialite:'Accompagnement immobilier' };
+
+function openDeleguerModal() {
+  var modal = document.getElementById('deleguerModal');
+  if (modal) modal.classList.add('open');
+}
 
 function openExpertModal() {
-  var expert = EXPERTS_MAP[currentUser.entreprise] || EXPERT_DEFAULT;
-  var existing = document.getElementById('expertModal');
-  if (existing) existing.remove();
-
-  var m = document.createElement('div');
-  m.className = 'modal-bg'; m.id = 'expertModal';
-  m.innerHTML =
-    '<div class="modal-box" style="max-width:380px;text-align:center">' +
-      '<div class="modal-header" style="justify-content:flex-end;border:none;padding-bottom:0">' +
-        '<button class="modal-close" onclick="document.getElementById(\'expertModal\').remove()">✕</button>' +
-      '</div>' +
-      '<div style="padding:8px 32px 32px">' +
-        '<div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--teal));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;margin:0 auto 16px">' + expert.avatar + '</div>' +
-        '<div style="font-family:\'Lora\',serif;font-size:20px;font-weight:600;color:var(--text);margin-bottom:4px">' + expert.nom + '</div>' +
-        '<div style="font-size:13px;color:var(--muted);margin-bottom:20px">' + expert.specialite + '</div>' +
-        '<a href="tel:' + expert.tel.replace(/\s/g,'') + '" class="btn btn-primary w-full" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font-size:16px">📞 ' + expert.tel + '</a>' +
-        '<div style="font-size:11px;color:var(--muted);margin-top:12px">Disponible du lundi au vendredi, 9h–18h</div>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(m);
-  m.addEventListener('click', function(e){ if (e.target === m) m.remove(); });
+  var modal = document.getElementById('expertModal');
+  if (modal) modal.classList.add('open');
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MODAL — TOUT DÉLÉGUER À TIMONIA
-   ═══════════════════════════════════════════════════════════════════════════ */
-function openDeleguerModal() {
-  var missions = proj().missions.filter(function(m){ return !m.done && m.delegation !== 'timonia'; });
-  var cout = missions.reduce(function(acc, m){ return acc + (m.prix || 0); }, 0);
-  var existing = document.getElementById('deleguerModal');
-  if (existing) existing.remove();
-
-  var m = document.createElement('div');
-  m.className = 'modal-bg'; m.id = 'deleguerModal';
-  m.innerHTML =
-    '<div class="modal-box" style="max-width:420px">' +
-      '<div class="modal-header">' +
-        '<div><div class="modal-title">🤝 Tout déléguer à Home in Love</div><div class="modal-sub">Résumé avant confirmation</div></div>' +
-        '<button class="modal-close" onclick="document.getElementById(\'deleguerModal\').remove()">✕</button>' +
-      '</div>' +
-      '<div style="padding:20px 28px 28px;display:flex;flex-direction:column;gap:16px">' +
-        '<div style="background:var(--surf2);border-radius:12px;padding:16px;display:flex;gap:16px">' +
-          '<div style="text-align:center;flex:1"><div style="font-size:24px;font-weight:800;color:var(--accent)">' + missions.length + '</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">missions</div></div>' +
-          '<div style="width:1px;background:var(--border)"></div>' +
-          '<div style="text-align:center;flex:1"><div style="font-size:24px;font-weight:800;color:var(--red)">− ' + cout.toLocaleString('fr-FR') + ' €</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">coût estimé</div></div>' +
-        '</div>' +
-        (missions.length === 0
-          ? '<div style="text-align:center;color:var(--muted);padding:12px">✅ Toutes les missions restantes sont déjà déléguées à Home in Love.</div>'
-          : '<div style="font-size:13px;color:var(--muted)">Les ' + missions.length + ' missions restantes seront assignées à ⭐ Home in Love. Vous pouvez modifier chaque mission individuellement après.</div>' +
-            '<div style="display:flex;gap:10px">' +
-              '<button class="btn btn-outline" style="flex:1" onclick="document.getElementById(\'deleguerModal\').remove()">Annuler</button>' +
-              '<button class="btn btn-primary" style="flex:1" onclick="confirmDeleguerTout()">Confirmer →</button>' +
-            '</div>') +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(m);
-  m.addEventListener('click', function(e){ if (e.target === m) m.remove(); });
+function closeModal(id) {
+  var modal = document.getElementById(id);
+  if (modal) modal.classList.remove('open');
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   ACTIONS DIVERSES
+   ───────────────────────────────────────────────────────────────────────── */
+function addMission(phaseId) {
+  var title = prompt('Titre de la mission suggérée :');
+  if (!title || !title.trim()) return;
+  var phase = proj().phases.find(function(ph){ return ph.id === phaseId; });
+  if (!phase) return;
+  phase.missions.push({
+    id: phaseId + '-' + Date.now(),
+    title: title.trim() + ' (en attente de validation)',
+    responsable: 'Moi',
+    statut: 'pending',
+    deadline: null,
+  });
+  renderTabProjet();
+}
 
+function addPrestataire() {
+  var nom = prompt('Nom du prestataire :');
+  if (!nom || !nom.trim()) return;
+  var specialite = prompt('Spécialité :') || '';
+  proj().prestataires.push({
+    id: 'p_' + Date.now(),
+    nom: nom.trim(),
+    specialite: specialite.trim(),
+    email: '—',
+    tel: '—',
+    coutEngage: 0,
+    coutPrev: 0,
+    isHIL: false,
+  });
+  renderTabPrestataires();
+}
+
+function openNewProject() {
+  alert('Fonctionnalité disponible après connexion à Supabase.');
+}
+
+function closeModalOutside(event, id) {
+  if (event.target === event.currentTarget) closeModal(id);
+}
