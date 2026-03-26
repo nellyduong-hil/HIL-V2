@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion | Home in Love</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<style>
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+  .login-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .login-card {
+    background: var(--surf);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 12px 48px var(--shadow);
+    animation: modalUp 0.3s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes modalUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  .login-title {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    text-align: center;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .login-sub {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 6px;
+  }
+  .login-notice {
+    background: rgba(30,99,240,0.08);
+    border: 1px solid rgba(30,99,240,0.18);
+    border-radius: 11px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #1e63f0;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .btn-login {
+    width: 100%;
+    background: #1e63f0;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+    margin-top: 6px;
+  }
+  .btn-login:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(30,99,240,0.35);
+  }
+  .login-error {
+    background: rgba(224,36,36,0.08);
+    border: 1px solid rgba(224,36,36,0.2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #e02424;
+    font-weight: 600;
+    margin-bottom: 16px;
+    text-align: center;
+    display: none;
+  }
+  .login-error.visible { display: block; }
+  .login-back {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .login-back:hover { color: var(--text); }
+  .demo-hint {
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+  .demo-hint-title {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .demo-accounts { display: flex; flex-direction: column; gap: 6px; }
+  .demo-account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surf2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 12px;
+  }
+  .demo-account:hover { border-color: #1e63f0; background: rgba(30,99,240,0.06); }
+  .demo-account-left { display: flex; align-items: center; gap: 10px; }
+  .demo-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1e63f0, #0ba592);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 10px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .demo-avatar.no-partner { background: linear-gradient(135deg, #8494b8, #4e6080); }
+  .demo-avatar.hil-agent  { background: linear-gradient(135deg, #0ba592, #059669); }
+  .demo-avatar.hil-admin  { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .demo-account-name  { font-weight: 700; color: var(--text); }
+  .demo-account-projet { color: var(--muted); font-size: 11px; margin-top: 1px; }
+  .demo-account-badge {
+    font-size: 10px; font-weight: 800;
+    padding: 2px 8px; border-radius: 100px; flex-shrink: 0;
+  }
+  .badge-partner   { background: rgba(11,165,146,0.1);  color: #0ba592; }
+  .badge-nopartner { background: rgba(132,148,184,0.1); color: #8494b8; }
+  .badge-agent     { background: rgba(11,165,146,0.1);  color: #0ba592; }
+  .badge-admin     { background: rgba(245,158,11,0.1);  color: #d97706; }
+  .demo-password { text-align: center; font-size: 11px; color: var(--muted); margin-top: 10px; }
+  .demo-password strong { color: var(--text); }
+  .demo-section-label {
+    font-size: 10px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--muted);
+    margin: 12px 0 6px; text-align: left;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+
+    <!-- Logo -->
+    <div class="login-logo">
+      <img src="img/hil-logo-round.png" alt="Home in Love" style="width:52px;height:52px;border-radius:50%;object-fit:cover;">
+      <span style="font-family:'Lora',serif;font-size:22px;color:var(--text)">Home in Love</span>
+    </div>
+
+    <div class="login-title">Connexion</div>
+    <div class="login-sub">Accédez à votre espace Home in Love</div>
+
+    <div class="login-notice">
+      💡 Votre entreprise est partenaire ? <br>Accès complet <strong>offert</strong> à toutes les fonctionnalités.
+    </div>
+
+    <div class="login-error" id="loginError">Email ou mot de passe incorrect.</div>
+
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="emailInput" placeholder="prenom@entreprise.fr" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="passwordInput" placeholder="••••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn-login" onclick="handleLogin()">Entrer dans mon espace →</button>
+
+    <a href="index.html" class="login-back">← Retour au site</a>
+
+    <!-- Demo accounts -->
+    <div class="demo-hint">
+      <div class="demo-hint-title">Comptes de démonstration</div>
+      <div id="demoAccounts"></div>
+      <div class="demo-password">Mot de passe : <strong>homeinlove2026</strong></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+  authLogoutOnLoginPage();
+
+  const projetLabels = {
+    location:       '🔍 Recherche location',
+    achat:          '🔑 Recherche achat',
+    'mise-location':'🏠 Mise en location',
+    vente:          '💰 Mise en vente',
+    renovation:     '🔨 Rénovation',
+    investissement: '📈 Investissement',
+    gestion:        '🏘️ Gestion locative',
+  };
+
+  const container = document.getElementById('demoAccounts');
+
+  // Salariés
+  const labelSal = document.createElement('div');
+  labelSal.className = 'demo-section-label';
+  labelSal.textContent = '👤 Espace salarié';
+  container.appendChild(labelSal);
+
+  DEMO_USERS.filter(u => u.role === 'salarie' || !u.role).forEach(u => {
+    const div = document.createElement('div');
+    div.className = 'demo-account';
+    div.onclick = () => {
+      document.getElementById('emailInput').value    = u.email;
+      document.getElementById('passwordInput').value = DEMO_PASSWORD;
+    };
+    div.innerHTML = `
+      <div class="demo-account-left">
+        <div class="demo-avatar ${u.partenaire ? '' : 'no-partner'}">${u.avatar}</div>
+        <div>
+          <div class="demo-account-name">${u.prenom} ${u.nom}</div>
+          <div class="demo-account-projet">${projetLabels[u.projetType] || '📋 Autre'}${u.entreprise ? ' · ' + u.entreprise : ''}</div>
+        </div>
+      </div>
+      <div class="demo-account-badge ${u.partenaire ? 'badge-partner' : 'badge-nopartner'}">
+        ${u.partenaire ? '👔 Partenaire' : '👤 Sans partenaire'}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  // Équipe HIL
+  const labelHIL = document.createElement('div');
+  labelHIL.className = 'demo-section-label';
+  labelHIL.textContent = '🏢 Espace mandataire';
+  container.appendChild(labelHIL);
+
+  DEMO_USERS.filter(u => u.role === 'mandataire' || u.role === 'admin').forEach(u => {
+    const div = document.createElement('div');
+    div.className = 'demo-account';
+    div.onclick = () => {
+      document.getElementById('emailInput').value    = u.email;
+      document.getElementById('passwordInput').value = DEMO_PASSWORD;
+    };
+    div.innerHTML = `
+      <div class="demo-account-left">
+        <div class="demo-avatar ${u.role === 'admin' ? 'hil-admin' : 'hil-agent'}">${u.avatar}</div>
+        <div>
+          <div class="demo-account-name">${u.prenom} ${u.nom}</div>
+          <div class="demo-account-projet">${u.email}</div>
+        </div>
+      </div>
+      <div class="demo-account-badge ${u.role === 'admin' ? 'badge-admin' : 'badge-agent'}">
+        ${u.role === 'admin' ? '⚙️ Admin' : '🏠 Mandataire'}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  function handleLogin() {
+    const email    = document.getElementById('emailInput').value.trim();
+    const password = document.getElementById('passwordInput').value;
+    const error    = document.getElementById('loginError');
+    error.classList.remove('visible');
+
+    const user = authLoginAndRedirect(email, password);
+    if (!user) {
+      error.classList.add('visible');
+      document.getElementById('passwordInput').value = '';
+    }
+  }
+
+  document.getElementById('passwordInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleLogin();
+  });
+  document.getElementById('emailInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleLogin();
+  });
+</script>
+</body>
+</html>
