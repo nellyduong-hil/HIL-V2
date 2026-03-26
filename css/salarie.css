@@ -1,0 +1,268 @@
+/* ─── HERO SALARIÉ ───────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  padding: 88px 0 72px;
+}
+.hero-glow {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 600px;
+  background: radial-gradient(ellipse, rgba(30,99,240,0.1) 0%, transparent 65%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-l);
+  border: 1px solid rgba(30,99,240,0.2);
+  border-radius: 100px;
+  padding: 5px 14px;
+  margin-bottom: 24px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+.hero-title {
+  margin-bottom: 20px;
+  color: var(--text);
+}
+.hero-title em {
+  font-style: italic;
+  font-family: 'Lora', serif;
+}
+.hero-sub {
+  font-size: 17px;
+  color: var(--muted);
+  max-width: 500px;
+  margin: 0 auto 44px;
+  line-height: 1.75;
+}
+
+/* ─── COVERAGE CHECKER ───────────────────────────────────────────────────── */
+.coverage-box {
+  padding: 24px;
+  max-width: 520px;
+  margin: 0 auto 20px;
+  text-align: left;
+}
+.coverage-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 12px;
+}
+.coverage-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.coverage-input {
+  flex: 1;
+  background: var(--surf2);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  transition: border 0.2s;
+  font-family: inherit;
+}
+.coverage-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(30,99,240,0.12);
+}
+.coverage-note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.coverage-note strong { color: var(--text); }
+
+.coverage-result {
+  border-radius: 12px;
+  padding: 13px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  animation: slideIn 0.25s;
+}
+.coverage-result.covered {
+  background: var(--green-l);
+  border: 1px solid rgba(22,163,74,0.25);
+}
+.coverage-result.not-covered {
+  background: var(--accent-l);
+  border: 1px solid rgba(30,99,240,0.2);
+}
+.coverage-result-icon { font-size: 22px; flex-shrink: 0; }
+.coverage-result-body { flex: 1; }
+.coverage-result-title { font-weight: 800; font-size: 14px; }
+.coverage-result.covered .coverage-result-title { color: var(--green); }
+.coverage-result.not-covered .coverage-result-title { color: var(--accent); }
+.coverage-result-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.coverage-result-sub a { color: var(--accent); text-decoration: underline; font-weight: 700; }
+.coverage-result .btn { flex-shrink: 0; font-size: 12px; padding: 8px 14px; }
+
+/* ─── STEPS ──────────────────────────────────────────────────────────────── */
+.card-step { padding: 28px; }
+.step-num {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+  display: block;
+}
+.step-icon { font-size: 32px; margin-bottom: 14px; }
+.card-step h3 { margin-bottom: 8px; }
+.card-step p { color: var(--muted); font-size: 14px; line-height: 1.65; }
+.step-note { font-size: 12px; font-weight: 700; margin-top: 12px !important; }
+
+/* ─── PRICING ────────────────────────────────────────────────────────────── */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+@media (max-width: 640px) { .pricing-grid { grid-template-columns: 1fr; } }
+
+.plan { padding: 28px; position: relative; overflow: hidden; }
+.plan-featured {
+  border-color: var(--accent) !important;
+}
+body.light .plan-featured { background: linear-gradient(160deg, #eef3ff, #ffffff); }
+body.dark  .plan-featured { background: linear-gradient(160deg, #0d1a40, #101826); }
+
+.plan-badge {
+  position: absolute;
+  top: 0; right: 0;
+  background: linear-gradient(135deg, var(--accent), var(--teal));
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: 0 18px 0 12px;
+  letter-spacing: 0.04em;
+}
+.plan-sub {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 6px;
+}
+.plan-name { font-size: 22px; font-family: 'Lora', serif; color: var(--text); margin-bottom: 14px; }
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+.price-amount { font-size: 36px; font-weight: 800; }
+.price-period { font-size: 13px; color: var(--muted); }
+.plan-features {
+  list-style: none;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.plan-features li {
+  font-size: 13px;
+  color: var(--muted);
+  padding-left: 20px;
+  position: relative;
+  line-height: 1.5;
+}
+.plan-features li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 12px;
+}
+.plan-featured .plan-features li::before { color: var(--teal); }
+
+.pricing-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 20px;
+}
+
+/* ─── USE CASES ──────────────────────────────────────────────────────────── */
+.card-usecase {
+  padding: 24px;
+  cursor: pointer;
+}
+.usecase-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+.card-usecase h3 { margin-bottom: 8px; }
+.card-usecase p  { color: var(--muted); font-size: 13px; line-height: 1.6; margin-bottom: 14px; }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* ─── TESTIMONIALS ───────────────────────────────────────────────────────── */
+.card-testimonial { padding: 26px; }
+.stars { color: #f59e0b; font-size: 14px; margin-bottom: 14px; letter-spacing: 2px; }
+.testimonial-text {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.7;
+  font-style: italic;
+  margin-bottom: 18px;
+}
+.testimonial-author { display: flex; align-items: center; gap: 10px; }
+.author-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--teal));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.author-name { font-weight: 700; font-size: 13px; }
+.author-role { font-size: 12px; color: var(--muted); }
+
+/* ─── CTA ────────────────────────────────────────────────────────────────── */
+.cta-section { text-align: center; }
+.cta-title { margin-bottom: 14px; }
+.cta-sub { color: var(--muted); font-size: 16px; margin-bottom: 30px; }
+.cta-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.cta-micro { font-size: 12px; color: var(--muted); margin-top: 14px; }
