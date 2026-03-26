@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon Plan de Vol — Home in Love</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ NAVBAR ══ -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-mark">HIL</span>
+      <span class="logo-text">Home in Love</span>
+    </a>
+    <div class="nav-user">
+      <div class="nav-avatar" id="navAvatar">—</div>
+      <div class="nav-user-info">
+        <div class="nav-user-name" id="navName">—</div>
+        <div class="nav-user-role">Client</div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <button class="btn-logout" onclick="authLogout()">Déconnexion</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════ ONBOARDING BANNER ══ -->
+<div class="onboarding-banner" id="onboardingBanner" style="display:none">
+  <div class="onboarding-content">
+    <div class="onboarding-icon">🗺️</div>
+    <div>
+      <div class="onboarding-title">Bienvenue sur votre Plan de Vol</div>
+      <div class="onboarding-text">Home in Love coordonne votre projet immobilier de A à Z, avec transparence et rigueur. Suivez chaque étape, accédez à vos documents et échangez avec votre expert — tout en un seul endroit.</div>
+    </div>
+  </div>
+  <button class="onboarding-close" onclick="closeOnboarding()">✕</button>
+</div>
+
+<!-- ════════════════════════════════════════════════ APP SHELL ══ -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="dash-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Mes projets</div>
+    </div>
+    <div class="project-list" id="sidebarProjectList"></div>
+    <div class="sidebar-footer">
+      <button class="btn btn-primary btn-sm w-full" onclick="openNewProject()">＋ Nouveau projet</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="dash-main">
+
+    <!-- PROJECT HEADER -->
+    <div class="proj-header">
+      <div class="proj-header-top">
+        <div class="proj-header-left">
+          <div class="proj-header-badge" id="projBadge">—</div>
+          <div class="proj-header-offre" id="projOffreBadge">—</div>
+        </div>
+        <div class="proj-header-ctas">
+          <button class="btn-cta-expert" onclick="openExpertModal()">📞 Appeler mon expert</button>
+          <button class="btn-cta-deleguer" id="ctaDeleguer" style="display:none" onclick="openDeleguerModal()">🤝 Tout déléguer</button>
+        </div>
+      </div>
+      <div class="proj-header-title" id="projTitle">—</div>
+      <div class="proj-header-meta">
+        <span>📍 <span id="projAdresse">—</span></span>
+        <span>🎯 <span id="projObjectif">—</span></span>
+        <span>⏰ <span id="projDeadline">—</span></span>
+      </div>
+      <div class="proj-progress-row">
+        <span>Avancement du projet</span>
+        <span id="projProgressPct">0/7 · 0%</span>
+      </div>
+      <div class="proj-progress-bar">
+        <div class="proj-progress-fill" id="projProgressFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="dash-tabs">
+      <button class="dash-tab active" data-tab="tab-projet">🗺️ Mon Projet</button>
+      <button class="dash-tab" data-tab="tab-documents">📁 Documents</button>
+      <button class="dash-tab" data-tab="tab-prestataires">👷 Prestataires</button>
+      <button class="dash-tab" data-tab="tab-messagerie">💬 Messagerie</button>
+    </div>
+
+    <!-- TAB: MON PROJET -->
+    <div class="tab-pane active" id="tab-projet">
+      <div id="projetContent">
+        <div class="loading-state">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- TAB: DOCUMENTS -->
+    <div class="tab-pane" id="tab-documents">
+      <div id="docsContent">
+        <div class="loading-state">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- TAB: PRESTATAIRES -->
+    <div class="tab-pane" id="tab-prestataires">
+      <div id="prestContent">
+        <div class="loading-state">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- TAB: MESSAGERIE -->
+    <div class="tab-pane" id="tab-messagerie">
+      <div id="msgContent">
+        <div class="loading-state">Chargement…</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════ MODAL EXPERTISE ══ -->
+<div class="modal-overlay" id="expertiseModal" onclick="closeModalOutside(event,'expertiseModal')">
+  <div class="modal-box">
+    <div class="modal-expertise-icon" id="expertiseModalIcon">⚖️</div>
+    <div class="modal-title" id="expertiseModalTitle">Risque Détecté</div>
+    <div class="modal-desc" id="expertiseModalDesc">—</div>
+    <div class="modal-price"><span id="expertiseModalPrix">590</span> <span class="modal-price-note">TTC · paiement sécurisé Stripe</span></div>
+    <button class="btn-modal-primary" id="expertiseModalBtn">Activer mon Expertise 🔒</button>
+    <button class="btn-modal-secondary" onclick="closeModal('expertiseModal')">Annuler</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ MODAL DÉLÉGUER ══ -->
+<div class="modal-overlay" id="deleguerModal" onclick="closeModalOutside(event,'deleguerModal')">
+  <div class="modal-box">
+    <div class="modal-expertise-icon">🤝</div>
+    <div class="modal-title">Délégation Totale</div>
+    <div class="modal-desc">Confiez l'exécution complète de votre projet à Home in Love. Nous gérons tout, vous validez les étapes clés. Honoraires au résultat — 3% du montant de la transaction.</div>
+    <div class="modal-price">3% <span class="modal-price-note">du montant · au résultat uniquement</span></div>
+    <button class="btn-modal-primary" onclick="closeModal('deleguerModal')">→ Activer le Mandat</button>
+    <button class="btn-modal-secondary" onclick="closeModal('deleguerModal')">Annuler</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ MODAL EXPERT ══ -->
+<div class="modal-overlay" id="expertModal" onclick="closeModalOutside(event,'expertModal')">
+  <div class="modal-box">
+    <div class="modal-expertise-icon">📞</div>
+    <div class="modal-title">Contacter votre expert</div>
+    <div class="modal-desc">Votre experte dédiée : <strong>Claire Dupont</strong><br>Disponible du lundi au vendredi, 9h–18h.</div>
+    <div style="margin:16px 0;text-align:center">
+      <div style="font-size:18px;font-weight:700">+33 6 98 76 54 32</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">ops@homeinlove.fr</div>
+    </div>
+    <button class="btn-modal-primary" onclick="closeModal('expertModal')">Fermer</button>
+  </div>
+</div>
+
+<script src="auth.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>
