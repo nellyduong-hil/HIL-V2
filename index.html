@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home in Love — Votre projet immobilier simplifié</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/salarie.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    .logo-img { width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0; }
+
+    /* ── Pricing grid ── */
+    .pricing-grid-new {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 24px;
+      margin-top: 2.5rem;
+      align-items: start;
+    }
+    @media (max-width:900px) { .pricing-grid-new { grid-template-columns:1fr; } }
+
+    .plan-new {
+      display:flex; flex-direction:column;
+      border-radius:20px; padding:32px 28px;
+      background:var(--surf); border:1.5px solid var(--border);
+      transition:transform 0.2s,box-shadow 0.2s;
+      position:relative;
+    }
+    .plan-new:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(0,0,0,.10); }
+    .plan-new.plan-star {
+      border-color:var(--accent);
+      background:linear-gradient(145deg,rgba(30,99,240,.04),var(--surf));
+      box-shadow:0 4px 32px rgba(30,99,240,.10);
+    }
+    .plan-new-badge {
+      position:absolute; top:-13px; left:50%; transform:translateX(-50%);
+      background:var(--accent); color:#fff;
+      font-size:10px; font-weight:800; letter-spacing:.1em;
+      padding:4px 14px; border-radius:20px; white-space:nowrap;
+    }
+    .plan-new-icon { font-size:2rem; margin-bottom:12px; }
+    .plan-new-name { font-family:'Lora',serif; font-size:1.35rem; font-weight:600; color:var(--text); margin-bottom:4px; }
+    .plan-new-tagline { font-size:13px; color:var(--muted); font-style:italic; margin-bottom:20px; line-height:1.5; }
+    .plan-new-price { font-size:2rem; font-weight:800; color:var(--accent); margin-bottom:4px; }
+    .plan-new-price.orange { color:#e8620a; }
+    .plan-new-price.gold   { color:var(--gold); font-size:1.4rem; }
+    .plan-new-price-note   { font-size:12px; color:var(--muted); margin-bottom:20px; }
+
+    .partner-gift {
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(22,163,74,.10); color:#16a34a;
+      border:1px solid rgba(22,163,74,.25);
+      border-radius:8px; font-size:11px; font-weight:700;
+      padding:5px 10px; margin-bottom:20px;
+    }
+    .plan-new-features { list-style:none; padding:0; margin:0 0 24px; display:flex; flex-direction:column; gap:10px; flex:1; }
+    .plan-new-features li { font-size:13.5px; color:var(--text); display:flex; align-items:flex-start; gap:8px; line-height:1.45; }
+    .plan-new-features li::before { content:'✓'; color:var(--teal); font-weight:800; flex-shrink:0; margin-top:1px; }
+
+    /* Co-Pilote table */
+    .copilote-table { width:100%; border-collapse:collapse; margin-bottom:8px; font-size:13px; }
+    .copilote-table thead th {
+      font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.08em;
+      color:var(--muted); padding:0 0 10px; text-align:left; border-bottom:1px solid var(--border);
+    }
+    .copilote-table thead th.col-eco { color:#16a34a; }
+    .copilote-table tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+    .copilote-table tbody tr:last-child { border-bottom:none; }
+    .copilote-table tbody tr:hover { background:var(--surf2); }
+    .copilote-table td { padding:10px 0; vertical-align:middle; }
+    .copilote-table td:first-child { font-weight:600; }
+    .td-eco { color:#16a34a; font-weight:700; font-size:12px; }
+    .td-price { font-weight:800; color:var(--accent); text-align:right; white-space:nowrap; }
+    .copilote-note { font-size:11px; color:var(--muted); text-align:center; padding:6px 0 0; }
+
+    /* Délégation totale */
+    .deleg-list { list-style:none; padding:0; margin:0 0 10px; display:flex; flex-direction:column; gap:8px; }
+    .deleg-list li {
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:13px; padding:8px 12px;
+      background:var(--surf2); border-radius:10px;
+    }
+    .deleg-label { color:var(--text); font-weight:500; }
+    .deleg-price { color:var(--accent); font-weight:700; }
+    .deleg-success-note { font-size:11.5px; color:#16a34a; text-align:center; font-weight:600; padding:4px 0 12px; }
+
+    /* Note bas section */
+    .pricing-note-new {
+      text-align:center; margin-top:2rem; font-size:14px; color:var(--muted);
+      background:var(--surf2); border-radius:12px; padding:14px 20px;
+    }
+    .pricing-note-new a { color:var(--accent); font-weight:600; text-decoration:none; }
+    .pricing-note-new a:hover { text-decoration:underline; }
+
+    /* Btn orange */
+    .btn-orange {
+      background:#e8620a; color:#fff; border:none; border-radius:10px;
+      padding:12px 20px; font-weight:700; font-size:14px; cursor:pointer;
+      transition:background .2s,transform .15s; width:100%;
+    }
+    .btn-orange:hover { background:#d45508; transform:translateY(-1px); }
+
+    /* Footer logo */
+    .footer-logo { display:flex; justify-content:center; margin-bottom:16px; }
+    .footer-logo img { height:40px; object-fit:contain; opacity:.9; }
+    body.dark .footer-logo img { filter:brightness(0) invert(1); opacity:.8; }
+  </style>
+</head>
+<body class="light">
+
+  <!-- NAV -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">
+        <img src="img/hil-logo-round.png" alt="Home in Love" class="logo-img" />
+          <span class="logo-text">Home in Love</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link active">Pour les salariés</a>
+        <a href="entreprise.html" class="nav-link">Pour les entreprises</a>
+      </div>
+      <div class="nav-right">
+        <button class="btn-theme" id="themeToggle" aria-label="Changer le thème">🌙</button>
+        <a href="login.html" class="btn btn-outline btn-sm">Se connecter</a>
+        <button class="btn btn-primary btn-sm" id="openRdvModal">Prendre RDV</button>
+      </div>
+      <button class="nav-burger" id="navBurger" aria-label="Menu">☰</button>
+    </div>
+    <div class="nav-mobile" id="navMobile">
+      <a href="index.html" class="nav-mobile-link">Pour les salariés</a>
+      <a href="entreprise.html" class="nav-mobile-link">Pour les entreprises</a>
+      <a href="login.html" class="nav-mobile-link">Se connecter</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="container">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        VOTRE PROJET IMMOBILIER SIMPLIFIÉ
+      </div>
+      <h1 class="hero-title">
+        Louez, Vendez, Achetez ou Rénovez —<br />
+        <em class="text-accent">sans vous noyer</em> dans les démarches.
+      </h1>
+      <p class="hero-sub">
+        Un expert vous accompagne à chaque étape. Vous choisissez ce que vous faites seul,
+        et ce que vous lui déléguez — avec le coût affiché avant.
+      </p>
+      <div class="coverage-box card">
+        <p class="coverage-label">🔍 Mon entreprise est-elle adhérente ?</p>
+        <div class="coverage-row">
+          <input type="text" id="coverageInput" class="coverage-input" placeholder="Nom de votre employeur (ex: Veolia, EDF…)" />
+          <button class="btn btn-primary" id="checkCoverage">Vérifier</button>
+        </div>
+        <div id="coverageResult" class="coverage-result" hidden></div>
+        <p class="coverage-note">
+          Entreprise adhérente ? Premier appel <strong class="text-green">offert</strong> ·
+          Sans abonnement : <strong>99 €</strong> le premier appel · Aucun engagement
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMMENT ÇA MARCHE -->
+  <section class="section">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-label text-accent">COMMENT ÇA MARCHE</p>
+        <h2 class="section-title">Vous décidez à chaque étape</h2>
+      </div>
+      <div class="grid-3">
+        <div class="card card-step">
+          <span class="step-num text-accent">01</span>
+          <div class="step-icon">📞</div>
+          <h3>Prenez rendez-vous</h3>
+          <p>Un expert analyse votre situation en 45 min. Diagnostic complet, objectifs clarifiés, plan d'action établi.</p>
+          <p class="step-note text-accent">→ 99 € si entreprise non adhérente · Offert si couverte</p>
+        </div>
+        <div class="card card-step">
+          <span class="step-num text-teal">02</span>
+          <div class="step-icon">📋</div>
+          <h3>Votre checklist personnalisée</h3>
+          <p>Chaque tâche de votre projet apparaît. Pour chacune : faire seul, ou déléguer avec le prix affiché avant.</p>
+          <p class="step-note text-teal">→ Zéro surprise · Vous gardez le contrôle total</p>
+        </div>
+        <div class="card card-step">
+          <span class="step-num text-gold">03</span>
+          <div class="step-icon">✅</div>
+          <h3>Avancez à votre rythme</h3>
+          <p>Faites vous-même ce que vous pouvez, déléguez ce qui vous dépasse. L'expert suit l'avancement en temps réel.</p>
+          <p class="step-note text-gold">→ Délégation à la carte · Pas d'abonnement caché</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TARIFS -->
+  <section class="section section-tinted">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-label text-accent">TARIFS TRANSPARENTS</p>
+        <h2 class="section-title">Choisissez votre niveau d'accompagnement</h2>
+        <p class="section-sub">
+          Si votre entreprise est adhérente, le Diagnostic Flash est
+          <strong class="text-green">offert</strong>.
+        </p>
+      </div>
+
+      <div class="pricing-grid-new">
+
+        <!-- DIAGNOSTIC FLASH -->
+        <div class="plan-new">
+          <div class="plan-new-icon">⚡</div>
+          <div class="plan-new-name">Diagnostic Flash</div>
+          <div class="plan-new-tagline">"Un blocage ? 45 minutes pour tout débloquer."</div>
+          <div class="plan-new-price orange">99 €</div>
+          <div class="plan-new-price-note">TTC · séance unique · sans engagement</div>
+          <div class="partner-gift">✨ Offert si votre entreprise est partenaire</div>
+          <ul class="plan-new-features">
+            <li>Appel expert 45 min dédié à votre projet</li>
+            <li>Diagnostic complet de votre situation</li>
+            <li>Feuille de route actionnable le jour même</li>
+            <li>Orientation financements & aides</li>
+            <li>Déduit de votre pack si vous continuez en Co-Pilote</li>
+          </ul>
+          <button class="btn-orange" onclick="openModal('rdv')">Réserver mon Diagnostic →</button>
+        </div>
+
+        <!-- CO-PILOTE -->
+        <div class="plan-new plan-star">
+          <div class="plan-new-badge">LE PLUS POPULAIRE</div>
+          <div class="plan-new-icon">🤝</div>
+          <div class="plan-new-name">Mode Co-Pilote</div>
+          <div class="plan-new-tagline">"Faites-le vous-même. Mais ne soyez plus jamais seul."</div>
+          <div class="plan-new-price">À partir de 390 €</div>
+          <div class="plan-new-price-note">TTC · 1h coaching/semaine + SMS illimités</div>
+          <div class="partner-gift">✨ Tarif privilégié si entreprise partenaire</div>
+          <table class="copilote-table">
+            <thead>
+              <tr>
+                <th>Projet</th>
+                <th class="col-eco">Économie moyenne</th>
+                <th style="text-align:right">Tarif - à partir de </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>🔍 Location</td>
+                <td class="td-eco">Frais de chasse évités</td>
+                <td class="td-price">390 €</td>
+              </tr>
+              <tr>
+                <td>💰 Vente</td>
+                <td class="td-eco">~10 000 € d'agence</td>
+                <td class="td-price">2 490 €</td>
+              </tr>
+              <tr>
+                <td>🔑 Achat</td>
+                <td class="td-eco">Négociation pro</td>
+                <td class="td-price">2 490 €</td>
+              </tr>
+              <tr>
+                <td>🔨 Rénovation</td>
+                <td class="td-eco">Maîtrise des devis</td>
+                <td class="td-price">1 990 €</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="copilote-note">💳 Paiement 3x ou 6x sans frais disponible</p>
+          <button class="btn btn-primary w-full" style="margin-top:16px" onclick="openModal('pack')">Découvrir les packs →</button>
+        </div>
+
+        <!-- DÉLÉGATION TOTALE -->
+        <div class="plan-new">
+          <div class="plan-new-icon">🏆</div>
+          <div class="plan-new-name">Délégation Totale</div>
+          <div class="plan-new-tagline">"Zéro stress. 100% de résultats. Nos experts prennent les commandes."</div>
+          <div class="plan-new-price gold">Sur mission</div>
+          <div class="plan-new-price-note">Honoraires payables à la réussite pour vente & achat</div>
+          <div class="partner-gift">✨ Tarif privilégié si entreprise partenaire</div>
+          <ul class="deleg-list">
+            <li><span class="deleg-label">🔍 Recherche Location</span><span class="deleg-price">2 250 €</span></li>
+            <li><span class="deleg-label">💰 Mise en Vente</span><span class="deleg-price">4% à la signature</span></li>
+            <li><span class="deleg-label">🔑 Recherche Achat</span><span class="deleg-price">3% à la signature</span></li>
+            <li><span class="deleg-label">🔨 Pilotage Travaux</span><span class="deleg-price">8% du chantier HT</span></li>
+          </ul>
+          <p class="deleg-success-note">✓ Vente & achat : payable uniquement quand on a trouvé</p>
+          <button class="btn btn-outline w-full" onclick="openModal('rdv')">Nous contacter →</button>
+        </div>
+
+      </div>
+
+      <p class="pricing-note-new">
+        💡 Votre entreprise n'est pas encore partenaire ?
+        <a href="entreprise.html">Suggérez-leur Home in Love</a>
+        — si elle souscrit, votre prochain Diagnostic Flash devient gratuit.
+      </p>
+    </div>
+  </section>
+
+  <!-- CAS D'USAGE -->
+  <section class="section">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-label text-accent">VOS PROJETS DE VIE</p>
+        <h2 class="section-title">On vous accompagne sur tout</h2>
+      </div>
+      <div class="grid-4">
+        <div class="card card-usecase" onclick="window.location='dashboard.html'">
+          <div class="usecase-icon accent-bg">🏠</div>
+          <h3>Recherche Logement</h3>
+          <p>À la location ou à l'achat, nous vous aidons à trouver votre futur logement : démarches administratives, financement… Zéro case oubliée.</p>
+          <div class="tags">
+            <span class="tag tag-accent">PTZ</span>
+            <span class="tag tag-accent">Courtage</span>
+            <span class="tag tag-accent">Compromis</span>
+          </div>
+        </div>
+        <div class="card card-usecase" onclick="window.location='dashboard.html'">
+          <div class="usecase-icon teal-bg">🔧</div>
+          <h3>Rénovation énergétique</h3>
+          <p>Des petits travaux à la passoire énergétique ? On vous aide à établir le cahier des charges et à coordonner les artisans.</p>
+          <div class="tags">
+            <span class="tag tag-teal">MaPrimeRénov'</span>
+            <span class="tag tag-teal">CEE</span>
+            <span class="tag tag-teal">Travaux</span>
+          </div>
+        </div>
+        <div class="card card-usecase" onclick="window.location='dashboard.html'">
+          <div class="usecase-icon gold-bg">🏘️</div>
+          <h3>Mise en location</h3>
+          <p>Checklist complète, bail conforme loi ALUR, délégation à la carte. La conformité sans stress.</p>
+          <div class="tags">
+            <span class="tag tag-gold">Diagnostics</span>
+            <span class="tag tag-gold">Bail ALUR</span>
+            <span class="tag tag-gold">LOCA-PASS</span>
+          </div>
+        </div>
+        <div class="card card-usecase" onclick="window.location='dashboard.html'">
+          <div class="usecase-icon purple-bg">💰</div>
+          <h3>Mise en vente</h3>
+          <p>Estimation, diagnostics obligatoires, marketing immobilier et suivi du compromis.</p>
+          <div class="tags">
+            <span class="tag tag-purple">Diagnostics</span>
+            <span class="tag tag-purple">Home staging</span>
+            <span class="tag tag-purple">Notaire</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TÉMOIGNAGES -->
+  <section class="section section-tinted">
+    <div class="container">
+      <h2 class="section-title" style="text-align:center;margin-bottom:2.5rem;">Ce qu'ils en disent</h2>
+      <div class="grid-3">
+        <div class="card card-testimonial">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">"En 3 semaines j'avais mon appartement, le MOBILI-PASS déposé et le notaire coordiné. Seule j'aurais mis 3 mois."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">SM</div>
+            <div><p class="author-name">Sophie M.</p><p class="author-role">Ingénieure, mutée Lyon</p></div>
+          </div>
+        </div>
+        <div class="card card-testimonial">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">"J'ai délégué les devis et le dossier MaPrimeRénov'. 8 200 € d'aides récupérées que j'aurais ratées."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">DR</div>
+            <div><p class="author-name">David R.</p><p class="author-role">Cadre, rénovation Bordeaux</p></div>
+          </div>
+        </div>
+        <div class="card card-testimonial">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">"La checklist avec les prix avant de déléguer, c'est ce qui m'a convaincu. Zéro surprise."</p>
+          <div class="testimonial-author">
+            <div class="author-avatar">ML</div>
+            <div><p class="author-name">Marie L.</p><p class="author-role">Directrice, vente Paris</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="section cta-section">
+    <div class="container text-center">
+      <h2 class="cta-title">Votre projet commence<br /><span class="gradient-text">par un appel de 45 min.</span></h2>
+      <p class="cta-sub">Vérifiez si votre entreprise est adhérente — sinon, 99 € et aucun engagement.</p>
+      <div class="cta-btns">
+        <button class="btn-orange" style="width:auto;padding:14px 32px;font-size:15px;border-radius:12px" onclick="openModal('rdv')">Réserver mon Diagnostic →</button>
+        <a href="entreprise.html" class="btn btn-outline btn-lg">Mon entreprise n'est pas adhérente</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-logo">
+        <img src="img/hil-full-logo-footer.png" alt="Home in Love" />
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Pour les salariés</a>
+        <a href="entreprise.html">Pour les entreprises</a>
+        <a href="dashboard.html">Mon espace</a>
+        <a href="#">Mentions légales</a>
+        <a href="mailto:contact@homeinlove.fr">contact@homeinlove.fr</a>
+      </div>
+      <p class="footer-copy">© 2025 Home in Love · Partenaire Action Logement certifié</p>
+    </div>
+  </footer>
+
+  <!-- MODAL RDV / DIAGNOSTIC FLASH -->
+  <div class="modal-bg" id="modalRdv" hidden>
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Réserver mon Diagnostic Flash</h2>
+          <p class="modal-sub">99 € TTC · Offert si votre entreprise est partenaire</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('rdv')">✕</button>
+      </div>
+      <div class="modal-notice">
+        💡 Entreprise adhérente ? Cet appel est <strong>offert</strong>. On vérifiera avec vous.
+      </div>
+      <form id="formRdv" class="modal-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prénom & Nom</label>
+            <input type="text" placeholder="Thomas Mercier" required />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" placeholder="t.mercier@email.com" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Votre employeur (optionnel)</label>
+          <input type="text" placeholder="Veolia, EDF, SNCF…" />
+        </div>
+        <div class="form-group">
+          <label>Votre projet</label>
+          <select>
+            <option value="">Sélectionner…</option>
+            <option>Mobilité professionnelle</option>
+            <option>Achat immobilier</option>
+            <option>Rénovation énergétique</option>
+            <option>Location / Gestion locative</option>
+            <option>Mise en vente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Contexte rapide</label>
+          <textarea rows="2" placeholder="Ex: Muté à Lyon en septembre, budget 420k€…"></textarea>
+        </div>
+        <button type="submit" class="btn-orange" style="border-radius:10px">Confirmer mon Diagnostic → 99 €</button>
+        <p class="form-note">Si votre entreprise est adhérente, le paiement ne sera pas prélevé.</p>
+      </form>
+      <div class="form-success" id="successRdv" hidden>
+        <div class="success-icon">✅</div>
+        <h3>C'est confirmé !</h3>
+        <p>Un expert Home in Love vous rappelle sous 24h pour fixer le créneau.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CO-PILOTE -->
+  <div class="modal-bg" id="modalPack" hidden>
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Mode Co-Pilote</h2>
+          <p class="modal-sub">À partir de 390 € · 1h coaching/semaine + SMS illimités</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('pack')">✕</button>
+      </div>
+      <div class="modal-notice">
+        💡 Entreprise adhérente ? Bénéficiez d'un <strong>tarif privilégié</strong>. On vérifiera avec vous.
+      </div>
+      <form id="formPack" class="modal-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prénom & Nom</label>
+            <input type="text" placeholder="Thomas Mercier" required />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" placeholder="t.mercier@email.com" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Votre employeur (optionnel)</label>
+          <input type="text" placeholder="Veolia, EDF, SNCF…" />
+        </div>
+        <div class="form-group">
+          <label>Votre projet</label>
+          <select>
+            <option value="">Sélectionner…</option>
+            <option>Mobilité professionnelle — 390 €</option>
+            <option>Achat immobilier — 2 990 €</option>
+            <option>Rénovation énergétique — 2 990 €</option>
+            <option>Location / Gestion locative — 390 €</option>
+            <option>Mise en vente — 1 990 €</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Contexte rapide</label>
+          <textarea rows="2" placeholder="Ex: Muté à Lyon en septembre, budget 420k€…"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Démarrer mon Co-Pilote →</button>
+        <p class="form-note">💳 Paiement 3x ou 6x sans frais · Tarif privilégié si entreprise adhérente.</p>
+      </form>
+      <div class="form-success" id="successPack" hidden>
+        <div class="success-icon">✅</div>
+        <h3>C'est confirmé !</h3>
+        <p>Un expert Home in Love vous rappelle sous 24h pour démarrer votre projet.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/theme.js"></script>
+  <script src="js/salarie.js"></script>
+</body>
+</html>
