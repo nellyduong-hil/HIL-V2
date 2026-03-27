@@ -584,10 +584,10 @@ bureau: [
       { id:'B7-2', title:'Vente ou location du bien transformé', responsable:'Cabinet', statut:'pending', deadline:addDays(s,85) },
     ]},
 ],
-  };
+  },
    
   return PHASES[type] || PHASES['location'];
-}
+};
 
 /* ─────────────────────────────────────────────────────────────────────────
    DOCUMENTS PAR TYPE DE PROJET
