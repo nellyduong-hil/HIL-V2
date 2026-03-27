@@ -51,6 +51,16 @@ const EXPERTISES = {
     cta     : 'Certifier la technique — 590€',
     couleur : '#c47a00',
   },
+   administratif: {
+  label   : 'Expertise Administrative',
+  icon    : '📋',
+  prix    : 590,
+  slogan  : 'Chaque dossier, chaque délai, chaque obligation maîtrisés.',
+  titre   : 'Sécurisez vos Démarches Administratives.',
+  desc    : 'Permis, déclarations, dossiers de subvention : nous gérons chaque obligation administrative pour que rien ne bloque votre projet. Délais respectés, dossiers complets.',
+  cta     : 'Sécuriser mes démarches — 590€',
+  couleur : '#6366f1',
+},
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
