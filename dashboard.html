@@ -27,10 +27,24 @@
       </div>
     </div>
     <div class="nav-right">
+      <button class="btn-hamburger" id="btnHamburger" onclick="toggleSidebar()" title="Mes projets">☰</button>
       <button class="btn-logout" onclick="authLogout()">Déconnexion</button>
     </div>
   </div>
 </nav>
+<script>
+function toggleSidebar() {
+  var s = document.querySelector('.dash-sidebar');
+  if (s) s.classList.toggle('open');
+}
+function initResponsive() {
+  var btn = document.getElementById('btnHamburger');
+  if (!btn) return;
+  btn.style.display = window.innerWidth < 768 ? 'flex' : 'none';
+}
+window.addEventListener('resize', initResponsive);
+document.addEventListener('DOMContentLoaded', initResponsive);
+</script>
 
 <!-- ══════════════════════════════════════════ ONBOARDING BANNER ══ -->
 <div class="onboarding-banner" id="onboardingBanner" style="display:none">
@@ -42,6 +56,17 @@
     </div>
   </div>
   <button class="onboarding-close" onclick="closeOnboarding()">✕</button>
+</div>
+
+<!-- Overlay mobile sidebar -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+
+<!-- ══════════════════════════════════════════ NUDGE RETARD ══ -->
+<div class="nudge-banner" id="nudgeBanner">
+  <div class="nudge-banner-icon">⚠️</div>
+  <div class="nudge-banner-text"><strong>Attention :</strong> <span id="nudgeText">Votre retard décale la date de signature finale.</span></div>
+  <button class="nudge-close" onclick="document.getElementById('nudgeBanner').style.display='none'">✕</button>
 </div>
 
 <!-- ════════════════════════════════════════════════ APP SHELL ══ -->
@@ -162,6 +187,25 @@
       <div style="font-size:13px;color:var(--muted);margin-top:4px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a6c9d6d5e6cec9cbc3cfc8cac9d0c388c0d4">[email&#160;protected]</a></div>
     </div>
     <button class="btn-modal-primary" onclick="closeModal('expertModal')">Fermer</button>
+  </div>
+</div>
+
+<!-- BARRE NAVIGATION MOBILE -->
+<div class="mobile-project-bar" id="mobileProjectBar" style="display:none">
+  <select class="mobile-project-select" id="mobileProjectSelect" onchange="switchProject(this.value)"></select>
+  <button class="mobile-new-btn" onclick="openNewProject()">＋</button>
+</div>
+
+
+<!-- ══════════════════════════════════════════ MODAL COFFRE-FORT ══ -->
+<div class="modal-overlay" id="coffreFortModal" onclick="closeModalOutside(event,'coffreFortModal')">
+  <div class="modal-box modal-coffre">
+    <div class="modal-expertise-icon">🗄️</div>
+    <div class="modal-title">Maintenir votre Conformité Légale</div>
+    <div class="modal-desc">Votre projet est clôturé. Maintenez l'accès à votre Carnet d'Information Logement certifié. En cas de contrôle ou de revente, votre carnet est prêt, certifié et accessible 24h/24. Ne perdez plus jamais une facture de garantie décennale.</div>
+    <div class="modal-price">25 € <span class="modal-price-note">/ an · tacite reconduction · Stripe</span></div>
+    <button class="btn-modal-primary" onclick="closeModal('coffreFortModal')">Maintenir mon accès CIL — 25€/an</button>
+    <button class="btn-modal-secondary" onclick="closeModal('coffreFortModal')">Pas maintenant</button>
   </div>
 </div>
 
