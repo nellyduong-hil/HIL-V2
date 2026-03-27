@@ -1585,13 +1585,6 @@ function closeSidebar() {
   if (overlay) overlay.classList.remove('open');
 }
 
-/* Fermer sidebar au changement de projet sur mobile */
-var _origSwitchProject = switchProject;
-switchProject = function(idx) {
-  _origSwitchProject(idx);
-  if (window.innerWidth < 768) closeSidebar();
-};
-
 /* Ajouter les tooltips data-tooltip sur les items sidebar (écran moyen) */
 function addSidebarTooltips() {
   document.querySelectorAll('.project-item').forEach(function(item) {
