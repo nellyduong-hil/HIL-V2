@@ -19,22 +19,56 @@ const PROJECT_TYPES = {
    CONFIG EXPERTISES (ex-Boucliers)
    ───────────────────────────────────────────────────────────────────────── */
 const EXPERTISES = {
-  juridique:     { label: 'Expertise Juridique',      icon: '⚖️', prix: 590, slogan: 'Vous ne signerez rien sans qu\'on ait tout lu.' },
-  technique:     { label: 'Expertise Technique',      icon: '🔧', prix: 590, slogan: 'Aucun vice caché ni travaux imposés ne passera.' },
-  financier:     { label: 'Expertise Financière',     icon: '💰', prix: 590, slogan: 'Votre offre est au bon prix, ni trop haut ni trop bas.' },
-  administratif: { label: 'Expertise Administrative', icon: '📋', prix: 590, slogan: 'Chaque dossier, chaque délai, chaque obligation maîtrisés.' },
-  autres:        { label: 'Autres Expertises',         icon: '✨', prix: 590, slogan: 'Un accompagnement sur-mesure pour chaque besoin spécifique.' },
+  financier: {
+    label   : 'Expertise Financière',
+    icon    : '💶',
+    prix    : 590,
+    slogan  : 'Ne laissez pas un centime sur la table.',
+    titre   : 'Sécurisez votre Plan de Financement & vos Aides.',
+    desc    : 'L\'ingénierie financière est le moteur de votre projet. Nos experts analysent vos droits (MaPrimeRénov\', PTZ, Action Logement, Fiscalité LMNP) pour maximiser votre budget et garantir l\'accord bancaire. Ne laissez pas un centime sur la table.',
+    cta     : 'Débloquer mes aides — 590€',
+    couleur : '#1e63f0',
+  },
+  juridique: {
+    label   : 'Expertise Juridique',
+    icon    : '⚖️',
+    prix    : 590,
+    slogan  : 'Vous ne signerez rien sans qu\'on ait tout lu.',
+    titre   : 'Blindez votre Engagement.',
+    desc    : 'Zonage PLU, servitudes, conformité du bail ou du compromis : nous passons votre dossier au crible du droit immobilier. Évitez les recours et les vices cachés avant de signer. Votre tranquillité n\'a pas de prix.',
+    cta     : 'Signer en toute sécurité — 590€',
+    couleur : '#7c3aed',
+  },
+  technique: {
+    label   : 'Expertise Technique',
+    icon    : '🔧',
+    prix    : 590,
+    slogan  : 'Aucun vice caché ni travaux imposés ne passera.',
+    titre   : 'Expertise Bâtiment & Travaux.',
+    desc    : 'Audit DPE, pathologie des structures et mise en concurrence réelle des artisans RGE. Nous certifions l\'état technique du bien et la justesse des devis pour éviter les mauvaises surprises sur le chantier.',
+    cta     : 'Certifier la technique — 590€',
+    couleur : '#c47a00',
+  },
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
    STATUTS DES PHASES
    ───────────────────────────────────────────────────────────────────────── */
 const PHASE_STATUS = {
-  done:    { label: 'Terminé',       color: '#16a34a', bg: 'rgba(22,163,74,0.09)',    dot: '#16a34a' },
-  active:  { label: 'En cours',      color: '#1e63f0', bg: 'rgba(30,99,240,0.09)',    dot: '#1e63f0' },
-  late:    { label: 'En retard',     color: '#c47a00', bg: 'rgba(196,122,0,0.09)',    dot: '#c47a00' },
-  locked:  { label: 'Non sécurisé', color: '#e02424', bg: 'rgba(224,36,36,0.09)',    dot: '#e02424' },
-  pending: { label: 'À venir',       color: '#8494b8', bg: 'rgba(132,148,184,0.09)', dot: '#8494b8' },
+  done:    { label: 'Validé ✓',              color: '#16a34a', bg: 'rgba(22,163,74,0.09)',    dot: '#16a34a', pulse: false },
+  active:  { label: 'Pilote en cours',        color: '#1e63f0', bg: 'rgba(30,99,240,0.09)',    dot: '#1e63f0', pulse: true  },
+  late:    { label: 'Action client requise',  color: '#c47a00', bg: 'rgba(196,122,0,0.09)',    dot: '#c47a00', pulse: true  },
+  locked:  { label: 'Non sécurisé 🔒',       color: '#e02424', bg: 'rgba(224,36,36,0.09)',    dot: '#e02424', pulse: false },
+  pending: { label: 'À venir',               color: '#8494b8', bg: 'rgba(132,148,184,0.09)', dot: '#8494b8', pulse: false },
+};
+
+/* Statuts sous-missions (feux de signalisation) */
+const MISSION_STATUS = {
+  done:    { label: 'Validé',               color: '#16a34a', bg: 'rgba(22,163,74,0.09)',    cls: 'ms-done'    },
+  active:  { label: 'Pilote en cours',       color: '#1e63f0', bg: 'rgba(30,99,240,0.09)',    cls: 'ms-active'  },
+  pending: { label: 'À venir',              color: '#8494b8', bg: 'rgba(132,148,184,0.09)', cls: 'ms-pending' },
+  client:  { label: 'Action client requise', color: '#c47a00', bg: 'rgba(196,122,0,0.09)',    cls: 'ms-client'  },
+  late:    { label: 'En retard',            color: '#e02424', bg: 'rgba(224,36,36,0.09)',    cls: 'ms-late'    },
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -590,7 +624,7 @@ function buildDemoProjects() {
       objectif: 'Acheter avant fin 2026 avec un financement optimisé',
       deadline: '2026-12-01',
       offre: 'copilot',
-      expertisesActives: { juridique: false, technique: true, financier: true, administratif: false, autres: false },
+      expertisesActives: { financier: true, juridique: false, technique: true },
       phases: buildPhases('achat', '2026-01-01'),
       documents: DOCS_BY_TYPE['achat'],
       prestataires: [
@@ -612,7 +646,7 @@ function buildDemoProjects() {
       objectif: 'Trouver un logement avant ma prise de poste le 1er mars 2026',
       deadline: '2026-03-01',
       offre: 'flash',
-      expertisesActives: { juridique: true, technique: false, financier: false, administratif: false, autres: false },
+      expertisesActives: { financier: false, juridique: true, technique: false },
       phases: buildPhases('location', '2026-01-15'),
       documents: DOCS_BY_TYPE['location'],
       prestataires: [
@@ -632,7 +666,7 @@ function buildDemoProjects() {
       objectif: 'Acquérir un studio à fort rendement locatif',
       deadline: '2026-09-01',
       offre: 'delegation',
-      expertisesActives: { juridique: false, technique: false, financier: false, administratif: false, autres: false },
+      expertisesActives: { financier: false, juridique: false, technique: false },
       phases: buildPhases('investissement', '2026-01-10'),
       documents: DOCS_BY_TYPE['investissement'],
       prestataires: [
@@ -650,7 +684,7 @@ function buildDemoProjects() {
       objectif: 'Louer mon bien rapidement avec un locataire solvable',
       deadline: '2026-04-01',
       offre: 'copilot',
-      expertisesActives: { juridique: true, technique: false, financier: false, administratif: false, autres: false },
+      expertisesActives: { financier: false, juridique: true, technique: false },
       phases: buildPhases('mise-location', '2026-01-20'),
       documents: DOCS_BY_TYPE['mise-location'],
       prestataires: [
@@ -668,7 +702,7 @@ function buildDemoProjects() {
       objectif: 'Vendre au meilleur prix avant l\'été 2026',
       deadline: '2026-07-01',
       offre: 'copilot',
-      expertisesActives: { juridique: false, technique: true, financier: false, administratif: false, autres: false },
+      expertisesActives: { financier: false, juridique: false, technique: true },
       phases: buildPhases('vente', '2026-01-05'),
       documents: DOCS_BY_TYPE['vente'],
       prestataires: [
@@ -686,7 +720,7 @@ function buildDemoProjects() {
       objectif: 'Passer de DPE G à DPE C avec les aides MaPrimeRénov\'',
       deadline: '2026-10-01',
       offre: 'flash',
-      expertisesActives: { juridique: false, technique: false, financier: false, administratif: false, autres: false },
+      expertisesActives: { financier: false, juridique: false, technique: false },
       phases: buildPhases('renovation', '2026-01-08'),
       documents: DOCS_BY_TYPE['renovation'],
       prestataires: [
@@ -819,10 +853,43 @@ function renderHeader() {
   /* Barre de progression phases */
   var doneCount = p.phases.filter(function(ph){ return ph.status === 'done'; }).length;
   var pct = Math.round((doneCount / p.phases.length) * 100);
+
+  /* Détecter retard client */
+  var hasClientLate = p.phases.some(function(ph) {
+    return ph.missions && ph.missions.some(function(m) {
+      return m.responsable === 'Moi' && (m.statut === 'late' || m.statut === 'client');
+    });
+  });
+  var lateClientMission = null;
+  p.phases.forEach(function(ph) {
+    if (ph.missions) ph.missions.forEach(function(m) {
+      if (!lateClientMission && m.responsable === 'Moi' && (m.statut === 'late' || m.statut === 'client')) {
+        lateClientMission = m;
+      }
+    });
+  });
+
   var fill = document.getElementById('projProgressFill');
-  if (fill) fill.style.width = pct + '%';
+  if (fill) {
+    fill.style.width = pct + '%';
+    fill.style.background = hasClientLate
+      ? 'linear-gradient(90deg,#c47a00,#ef9f27)'
+      : 'linear-gradient(90deg,var(--accent),var(--teal))';
+  }
   var pctEl = document.getElementById('projProgressPct');
   if (pctEl) pctEl.textContent = 'Phase ' + doneCount + '/' + p.phases.length + ' · ' + pct + '%';
+
+  /* Bandeau nudge retard client */
+  var nudge = document.getElementById('nudgeBanner');
+  if (nudge) {
+    if (lateClientMission) {
+      nudge.style.display = 'flex';
+      var nudgeText = document.getElementById('nudgeText');
+      if (nudgeText) nudgeText.textContent = 'Votre retard sur l\'étape "' + lateClientMission.title + '" décale votre date de signature finale.';
+    } else {
+      nudge.style.display = 'none';
+    }
+  }
 
   /* Badge offre */
   var offreBadge = document.getElementById('projOffreBadge');
@@ -871,19 +938,21 @@ function renderTabProjet() {
   var activePhaseIdx = p.phases.findIndex(function(ph){ return ph.status === 'active' || ph.status === 'late' || ph.status === 'locked'; });
   if (activePhaseIdx === -1) activePhaseIdx = 0;
 
-  /* ── Barre de santé expertises ── */
-  var santeHtml = '<div class="sante-section"><div class="sante-title">Ma sécurisation immobilière</div><div class="sante-grid">';
-  Object.keys(EXPERTISES).forEach(function(key) {
+  /* ── Widget sécurité (3 expertises) ── */
+  var santeHtml = '<div class="sante-section"><div class="sante-header"><div class="sante-title">État de Sécurité du Projet</div><div class="sante-subtitle">Mis à jour il y a 2h</div></div><div class="sante-grid">';
+  ['financier','juridique','technique'].forEach(function(key) {
     var ex = EXPERTISES[key];
     var active = p.expertisesActives[key];
-    var statusClass = active ? 'sante-ok' : 'sante-risk';
-    var statusLabel = active ? '✓ Validé par expert' : '⚠ Risque détecté';
     santeHtml +=
-      '<div class="sante-card ' + statusClass + '">' +
-        '<div class="sante-icon">' + ex.icon + '</div>' +
-        '<div class="sante-label">' + ex.label + '</div>' +
-        '<div class="sante-status">' + statusLabel + '</div>' +
-        (!active ? '<button class="btn-resoudre" onclick="openExpertiseModal(\'' + key + '\')">Résoudre →</button>' : '') +
+      '<div class="sante-card ' + (active ? 'sante-ok' : 'sante-risk') + '">' +
+        '<div class="sante-card-top">' +
+          '<div class="sante-icon">' + ex.icon + '</div>' +
+          '<div class="sante-lock">' + (active ? '<span class="lock-certified">✅</span>' : '<span class="lock-closed">🔒</span>') + '</div>' +
+        '</div>' +
+        '<div class="sante-label">' + ex.label.replace('Expertise ','') + '</div>' +
+        '<div class="sante-slogan">' + ex.slogan + '</div>' +
+        '<div class="sante-status">' + (active ? '✓ Phase Certifiée Pilot Immo' : '⚠ Risque détecté') + '</div>' +
+        (!active ? '<button class="btn-resoudre" onclick="openExpertiseModal(\'' + key + '\')">Résoudre →</button>' : '<div class="sante-certified">Phase Certifiée ✅</div>') +
       '</div>';
   });
   santeHtml += '</div></div>';
@@ -942,19 +1011,23 @@ function renderTabProjet() {
       /* Sous-missions */
       timelineHtml += '<div class="tl-missions">';
       phase.missions.forEach(function(m) {
-        var mSt = PHASE_STATUS[m.statut] || PHASE_STATUS.pending;
+        var mSt = MISSION_STATUS[m.statut] || MISSION_STATUS.pending;
+        /* Statut client automatique si responsable = Moi et non done */
+        if (m.responsable === 'Moi' && m.statut === 'active') mSt = MISSION_STATUS.client;
         var respClass = m.responsable === 'Moi' ? 'resp-moi' : (m.responsable === 'Cabinet' ? 'resp-cabinet' : 'resp-presta');
+        var isClientAction = m.responsable === 'Moi' && m.statut !== 'done';
         timelineHtml +=
-          '<div class="tl-mission">' +
-            '<div class="tl-mission-dot" style="background:' + mSt.dot + '"></div>' +
+          '<div class="tl-mission' + (isClientAction ? ' tl-mission-client' : '') + '">' +
+            '<div class="tl-feu ' + mSt.cls + '"></div>' +
             '<div class="tl-mission-body">' +
               '<div class="tl-mission-title">' + m.title + '</div>' +
               '<div class="tl-mission-meta">' +
                 '<span class="tl-resp ' + respClass + '">' + m.responsable + '</span>' +
                 '<span class="tl-deadline">📅 ' + fmtDate(m.deadline) + '</span>' +
+                '<span class="tl-status-badge ' + mSt.cls + '">' + mSt.label + '</span>' +
               '</div>' +
+              (isClientAction ? '<div class="tl-client-nudge">Le projet attend votre action pour avancer</div>' : '') +
             '</div>' +
-            '<div class="tl-mission-status" style="color:' + mSt.color + '">' + mSt.label + '</div>' +
           '</div>';
       });
       timelineHtml += '</div>';
@@ -1002,10 +1075,30 @@ function renderTabDocuments() {
   var wrap = document.getElementById('docsContent');
   if (!wrap) return;
 
+  /* Calcul jauge CIL */
+  var totalDocs = 0, recuDocs = 0;
+  p.documents.forEach(function(s){ s.docs.forEach(function(d){ totalDocs++; if(d.statut==='recu') recuDocs++; }); });
+  var cilPct = totalDocs > 0 ? Math.round((recuDocs/totalDocs)*100) : 0;
+  var cilCircle = 2 * Math.PI * 36;
+  var cilOffset = cilCircle - (cilCircle * cilPct / 100);
+
   var html =
     '<div class="docs-header-banner">' +
-      '<div class="docs-banner-title">📁 Votre coffre-fort de documents</div>' +
-      '<div class="docs-banner-text">Cet espace constitue votre <strong>Carnet d\'Information Logement (CIL)</strong>, rendu obligatoire par les articles L126-35-2 et suivants du Code de la construction et de l\'habitation. Conservez ici tous les documents essentiels à votre projet — ils seront transmissibles lors de toute future transaction.</div>' +
+      '<div class="docs-banner-left">' +
+        '<div class="docs-banner-title">📁 Votre coffre-fort de documents</div>' +
+        '<div class="docs-banner-text">Cet espace constitue votre <strong>Carnet d\'Information Logement (CIL)</strong>, rendu obligatoire par les articles L126-35-2 et suivants du Code de la construction et de l\'habitation. Conservez ici tous les documents essentiels à votre projet — ils seront transmissibles lors de toute future transaction.</div>' +
+        '<button class="btn-export-cil" onclick="exportCIL()">📄 Exporter mon Carnet d\'Information (PDF)</button>' +
+      '</div>' +
+      '<div class="docs-banner-right">' +
+        '<div class="cil-gauge">' +
+          '<svg width="88" height="88" viewBox="0 0 88 88">' +
+            '<circle cx="44" cy="44" r="36" fill="none" stroke="var(--surf3)" stroke-width="8"/>' +
+            '<circle cx="44" cy="44" r="36" fill="none" stroke="' + (cilPct >= 80 ? '#16a34a' : cilPct >= 50 ? '#1e63f0' : '#c47a00') + '" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + cilCircle.toFixed(1) + '" stroke-dashoffset="' + cilOffset.toFixed(1) + '" transform="rotate(-90 44 44)"/>' +
+            '<text x="44" y="48" text-anchor="middle" font-size="16" font-weight="800" fill="var(--text)">' + cilPct + '%</text>' +
+          '</svg>' +
+          '<div class="cil-gauge-label">Conformité CIL</div>' +
+        '</div>' +
+      '</div>' +
     '</div>';
 
   p.documents.forEach(function(section) {
@@ -1190,10 +1283,12 @@ function openExpertiseModal(key) {
   var modal = document.getElementById('expertiseModal');
   if (!modal) return;
   document.getElementById('expertiseModalIcon').textContent  = ex.icon;
-  document.getElementById('expertiseModalTitle').textContent = ex.label + ' Détectée';
-  document.getElementById('expertiseModalDesc').textContent  = 'Notre expert a identifié un point de vigilance sur votre dossier. Activez l\'' + ex.label + ' pour une analyse complète et une levée de risque garantie.';
+  document.getElementById('expertiseModalTitle').textContent = ex.titre || (ex.label + ' — Risque détecté');
+  document.getElementById('expertiseModalDesc').textContent  = ex.desc  || 'Notre expert a identifié un point de vigilance sur votre dossier.';
   document.getElementById('expertiseModalPrix').textContent  = ex.prix + ' €';
-  document.getElementById('expertiseModalBtn').onclick = function() { activerExpertise(key); };
+  var btn = document.getElementById('expertiseModalBtn');
+  btn.textContent = ex.cta || ('Activer ' + ex.label + ' — ' + ex.prix + '€');
+  btn.onclick = function() { activerExpertise(key); };
   modal.classList.add('open');
 }
 
@@ -1236,6 +1331,22 @@ function addMission(phaseId) {
   renderTabProjet();
 }
 
+function exportCIL() {
+  var p = proj();
+  var recuDocs = [];
+  p.documents.forEach(function(s){ s.docs.forEach(function(d){ if(d.statut==='recu') recuDocs.push(d.label); }); });
+  alert('Export PDF — Carnet d\'Information Logement\n\n' + recuDocs.length + ' document(s) certifié(s) :\n• ' + recuDocs.join('\n• ') + '\n\nFonctionnalité complète disponible après connexion à Stripe & Supabase.');
+}
+
+function checkCoffreFortP7() {
+  var p = proj();
+  var isP7Done = p.phases.length > 0 && p.phases[p.phases.length-1].status === 'done';
+  if (isP7Done && p.offre !== 'coffre-fort') {
+    var modal = document.getElementById('coffreFortModal');
+    if (modal) modal.classList.add('open');
+  }
+}
+
 function addPrestataire() {
   var nom = prompt('Nom du prestataire :');
   if (!nom || !nom.trim()) return;
@@ -1260,3 +1371,96 @@ function openNewProject() {
 function closeModalOutside(event, id) {
   if (event.target === event.currentTarget) closeModal(id);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RESPONSIVE — barre mobile
+   ───────────────────────────────────────────────────────────────────────── */
+function initMobileBar() {
+  var bar = document.getElementById('mobileProjectBar');
+  var sel = document.getElementById('mobileProjectSelect');
+  if (!bar || !sel) return;
+
+  function update() {
+    var isMobile = window.innerWidth <= 600;
+    bar.style.display = isMobile ? 'flex' : 'none';
+  }
+
+  // Remplir le select
+  allProjects.forEach(function(p, idx) {
+    var cfg = PROJECT_TYPES[p.type] || {};
+    var opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = (cfg.label || p.type) + ' — ' + p.adresse.split('—')[0].trim();
+    sel.appendChild(opt);
+  });
+
+  sel.value = currentProjIdx;
+  sel.addEventListener('change', function() {
+    switchProject(parseInt(this.value));
+    sel.value = currentProjIdx;
+  });
+
+  update();
+  window.addEventListener('resize', update);
+}
+
+// Patch switchProject pour sync le select mobile
+var _origSwitchProject = switchProject;
+switchProject = function(idx) {
+  _origSwitchProject(idx);
+  var sel = document.getElementById('mobileProjectSelect');
+  if (sel) sel.value = currentProjIdx;
+};
+
+// Init au chargement
+document.addEventListener('DOMContentLoaded', function() {
+  // Légèrement différé pour que allProjects soit prêt
+  setTimeout(initMobileBar, 100);
+});
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SIDEBAR RESPONSIVE
+   ───────────────────────────────────────────────────────────────────────── */
+function toggleSidebar() {
+  var sidebar = document.querySelector('.dash-sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if (!sidebar) return;
+  var isOpen = sidebar.classList.contains('open');
+  if (isOpen) { closeSidebar(); } else { openSidebar(); }
+}
+
+function openSidebar() {
+  var sidebar = document.querySelector('.dash-sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.add('open');
+  if (overlay) overlay.classList.add('open');
+}
+
+function closeSidebar() {
+  var sidebar = document.querySelector('.dash-sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('open');
+}
+
+/* Fermer sidebar au changement de projet sur mobile */
+var _origSwitchProject = switchProject;
+switchProject = function(idx) {
+  _origSwitchProject(idx);
+  if (window.innerWidth < 768) closeSidebar();
+};
+
+/* Ajouter les tooltips data-tooltip sur les items sidebar (écran moyen) */
+function addSidebarTooltips() {
+  document.querySelectorAll('.project-item').forEach(function(item) {
+    var name = item.querySelector('.proj-item-name');
+    if (name) item.setAttribute('data-tooltip', name.textContent);
+  });
+}
+
+/* Appeler après renderSidebar */
+var _origRenderSidebar = renderSidebar;
+renderSidebar = function() {
+  _origRenderSidebar();
+  addSidebarTooltips();
+};
