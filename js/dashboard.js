@@ -13,6 +13,8 @@ const PROJECT_TYPES = {
   'mise-location': { label: 'Mise en Location',     color: '#c47a00', bg: 'rgba(196,122,0,0.09)'   },
   'vente':         { label: 'Mise en Vente',        color: '#16a34a', bg: 'rgba(22,163,74,0.09)'   },
   'renovation':    { label: 'Rénovation',           color: '#e02424', bg: 'rgba(224,36,36,0.09)'   },
+  'passoire':      { label: 'Sauvetage Passoire', color: '#f59e0b', bg: 'rgba(245,158,11,0.09)'    },
+  'bureau':        { label: 'Transformation Bureau', color: '#6366f1', bg: 'rgba(99,102,241,0.09)' },
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -454,6 +456,101 @@ function buildPhases(type, start) {
         ]
       },
     ],
+
+      passoire: [
+        { id:'P1', title:'Audit & Diagnostic', deadline:s, status:'done',
+          expertises:[],
+          missions:[
+            { id:'PS1-1', title:'DPE de départ', responsable:'Prestataire', statut:'done', deadline:addDays(s,0) },
+            { id:'PS1-2', title:'Audit énergétique obligatoire', responsable:'Cabinet', statut:'done', deadline:addDays(s,2) },
+            { id:'PS1-3', title:'Vérification de la structure', responsable:'Cabinet', statut:'done', deadline:addDays(s,3) },
+          ]},
+        { id:'P2', title:'Ingénierie Financière', deadline:addDays(s,7), status:'active',
+          expertises:['financier','juridique'],
+          missions:[
+            { id:'PS2-1', title:'Calcul MaPrimeRénov\'', responsable:'Cabinet', statut:'active', deadline:addDays(s,7) },
+            { id:'PS2-2', title:'Calcul CEE', responsable:'Cabinet', statut:'pending', deadline:addDays(s,8) },
+            { id:'PS2-3', title:'Calcul Éco-PTZ', responsable:'Cabinet', statut:'pending', deadline:addDays(s,9) },
+            { id:'PS2-4', title:'Objectif : réduire le reste à charge au minimum', responsable:'Cabinet', statut:'pending', deadline:addDays(s,10) },
+          ]},
+        { id:'P3', title:'Sélection RGE & Devis', deadline:addDays(s,7), status:'locked',
+          expertises:['technique'],
+          missions:[
+            { id:'PS3-1', title:'Mise en concurrence artisans certifiés RGE', responsable:'Cabinet', statut:'pending', deadline:addDays(s,14) },
+            { id:'PS3-2', title:'Vérification des assurances décennales', responsable:'Cabinet', statut:'pending', deadline:addDays(s,16) },
+          ]},
+        { id:'P4', title:'Administratif & Urbanisme', deadline:addDays(s,14), status:'pending',
+          expertises:[],
+          missions:[
+            { id:'PS4-1', title:'Déclaration préalable (si modification façade/fenêtres)', responsable:'Cabinet', statut:'pending', deadline:addDays(s,21) },
+          ]},
+        { id:'P5', title:'Suivi de Chantier', deadline:addDays(s,14), status:'pending',
+          expertises:['technique'],
+          missions:[
+            { id:'PS5-1', title:'Visites de contrôle', responsable:'Cabinet', statut:'pending', deadline:addDays(s,30) },
+            { id:'PS5-2', title:'Respect du planning thermique', responsable:'Cabinet', statut:'pending', deadline:addDays(s,45) },
+          ]},
+        { id:'P6', title:'Certification & Réception', deadline:addDays(s,30), status:'pending',
+          expertises:['juridique'],
+          missions:[
+            { id:'PS6-1', title:'Nouveau DPE — vérification du saut de classe (G à C ou B)', responsable:'Prestataire', statut:'pending', deadline:addDays(s,60) },
+            { id:'PS6-2', title:'Levée des réserves', responsable:'Cabinet', statut:'pending', deadline:addDays(s,62) },
+          ]},
+        { id:'P7', title:'Relocation & CIL', deadline:addDays(s,60), status:'pending',
+          expertises:[],
+          missions:[
+            { id:'PS7-1', title:'Mise à jour du Carnet d\'Information (obligatoire)', responsable:'Cabinet', statut:'pending', deadline:addDays(s,65) },
+            { id:'PS7-2', title:'Nouveau bail ou mise en place de la gestion', responsable:'Cabinet', statut:'pending', deadline:addDays(s,67) },
+          ]},
+      ],
+      
+      bureau: [
+        { id:'P1', title:'Audit & Diagnostic', deadline:s, status:'done',
+          expertises:[],
+          missions:[
+            { id:'B1-1', title:'Analyse du PLU (Plan Local d\'Urbanisme)', responsable:'Cabinet', statut:'done', deadline:addDays(s,0) },
+            { id:'B1-2', title:'Vérification du règlement de copropriété', responsable:'Cabinet', statut:'done', deadline:addDays(s,2) },
+          ]},
+        { id:'P2', title:'Ingénierie Financière', deadline:addDays(s,7), status:'active',
+          expertises:['juridique','financier'],
+          missions:[
+            { id:'B2-1', title:'Modèle de rentabilité — calcul de la plus-value latente', responsable:'Cabinet', statut:'active', deadline:addDays(s,7) },
+            { id:'B2-2', title:'Montage fiscal (LMNP/SCI)', responsable:'Cabinet', statut:'pending', deadline:addDays(s,10) },
+          ]},
+        { id:'P3', title:'Plans & Architecture', deadline:addDays(s,7), status:'locked',
+          expertises:['technique'],
+          missions:[
+            { id:'B3-1', title:'Relevé de l\'existant', responsable:'Prestataire', statut:'pending', deadline:addDays(s,14) },
+            { id:'B3-2', title:'Plans de coupes', responsable:'Prestataire', statut:'pending', deadline:addDays(s,16) },
+            { id:'B3-3', title:'Schémas des futurs réseaux (eau/élec)', responsable:'Prestataire', statut:'pending', deadline:addDays(s,18) },
+          ]},
+        { id:'P4', title:'Autorisations & Urbanisme', deadline:addDays(s,14), status:'pending',
+          expertises:['juridique'],
+          missions:[
+            { id:'B4-1', title:'Changement de destination — permis de construire ou DP', responsable:'Cabinet', statut:'pending', deadline:addDays(s,21) },
+            { id:'B4-2', title:'Phase critique — suivi instruction', responsable:'Cabinet', statut:'pending', deadline:addDays(s,35) },
+          ]},
+        { id:'P5', title:'Consultation Entreprises', deadline:addDays(s,14), status:'pending',
+          expertises:['technique'],
+          missions:[
+            { id:'B5-1', title:'Devis cloisonnement', responsable:'Prestataire', statut:'pending', deadline:addDays(s,40) },
+            { id:'B5-2', title:'Devis isolation phonique', responsable:'Prestataire', statut:'pending', deadline:addDays(s,42) },
+            { id:'B5-3', title:'Devis réseaux', responsable:'Prestataire', statut:'pending', deadline:addDays(s,44) },
+          ]},
+        { id:'P6', title:'Réalisation & Contrôle', deadline:addDays(s,30), status:'pending',
+          expertises:['juridique','financier','technique'],
+          missions:[
+            { id:'B6-1', title:'Suivi des travaux lourds', responsable:'Cabinet', statut:'pending', deadline:addDays(s,60) },
+            { id:'B6-2', title:'Mise en conformité sécurité/incendie', responsable:'Cabinet', statut:'pending', deadline:addDays(s,70) },
+          ]},
+        { id:'P7', title:'Mise en Marché & CIL', deadline:addDays(s,60), status:'pending',
+          expertises:[],
+          missions:[
+            { id:'B7-1', title:'Création du CIL (indispensable pour les futurs acheteurs)', responsable:'Cabinet', statut:'pending', deadline:addDays(s,80) },
+            { id:'B7-2', title:'Vente ou location du bien transformé', responsable:'Cabinet', statut:'pending', deadline:addDays(s,85) },
+          ]},
+      ],
+     
   };
 
   return PHASES[type] || PHASES['location'];
@@ -696,6 +793,43 @@ function buildDemoProjects() {
       notesPrivees: [],
       nextMsgId: 1,
     },
+      {
+        id: 'proj_7',
+        type: 'passoire',
+        titre: 'Sauvetage passoire — Appartement DPE G, Lyon',
+        adresse: 'Lyon 8e — 69008',
+        objectif: 'Passer de DPE G à DPE C et remettre en location',
+        deadline: '2026-12-01',
+        offre: 'copilot',
+        expertisesActives: { financier: false, juridique: false, technique: false },
+        phases: buildPhases('passoire', '2026-02-01'),
+        documents: DOCS_BY_TYPE['renovation'],
+        prestataires: [
+          { id:'p1', nom:'Home in Love', specialite:'Accompagnement immobilier', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', coutEngage:400, coutPrev:1200, isHIL:true },
+        ],
+        messages: [],
+        notesPrivees: [],
+        nextMsgId: 1,
+      },
+      {
+        id: 'proj_8',
+        type: 'bureau',
+        titre: 'Transformation bureau en logement — Paris 11e',
+        adresse: 'Paris 11e — 75011',
+        objectif: 'Convertir 120m² de bureaux en 3 appartements locatifs',
+        deadline: '2027-06-01',
+        offre: 'delegation',
+        expertisesActives: { financier: false, juridique: false, technique: false },
+        phases: buildPhases('bureau', '2026-02-15'),
+        documents: DOCS_BY_TYPE['renovation'],
+        prestataires: [
+          { id:'p1', nom:'Home in Love', specialite:'Accompagnement immobilier', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', coutEngage:0, coutPrev:3500, isHIL:true },
+        ],
+        messages: [],
+        notesPrivees: [],
+        nextMsgId: 1,
+      },
+     
   ];
 }
 
