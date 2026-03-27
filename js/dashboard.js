@@ -13,8 +13,8 @@ const PROJECT_TYPES = {
   'mise-location': { label: 'Mise en Location',     color: '#c47a00', bg: 'rgba(196,122,0,0.09)'   },
   'vente':         { label: 'Mise en Vente',        color: '#16a34a', bg: 'rgba(22,163,74,0.09)'   },
   'renovation':    { label: 'Rénovation',           color: '#e02424', bg: 'rgba(224,36,36,0.09)'   },
-  'passoire':    { label: 'Sauvetage Passoire',      color: '#f59e0b', bg: 'rgba(245,158,11,0.09)'  },
-  'bureau':      { label: 'Transformation Bureau',   color: '#6366f1', bg: 'rgba(99,102,241,0.09)'  },
+  'passoire':      { label: 'Passoire Energetique',      color: '#f59e0b', bg: 'rgba(245,158,11,0.09)' },
+  'bureau':        { label: 'Transformation Bureau',   color: '#6366f1', bg: 'rgba(99,102,241,0.09)'  },
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -490,7 +490,6 @@ function buildPhases(type, start) {
         ]
       },
     ],
-  };
 
 passoire: [
   { id:'P1', title:'Audit & Diagnostic', deadline:s, status:'done',
@@ -585,7 +584,7 @@ bureau: [
       { id:'B7-2', title:'Vente ou location du bien transformé', responsable:'Cabinet', statut:'pending', deadline:addDays(s,85) },
     ]},
 ],
-
+  };
    
   return PHASES[type] || PHASES['location'];
 }
@@ -827,18 +826,18 @@ function buildDemoProjects() {
       notesPrivees: [],
       nextMsgId: 1,
     },
-  {
-  id: 'proj_7',
-  type: 'passoire',
-  titre: 'Sauvetage passoire — Appartement DPE G, Lyon',
-  adresse: 'Lyon 8e — 69008',
-  objectif: 'Passer de DPE G à DPE C et remettre en location',
-  deadline: '2026-12-01',
-  offre: 'copilot',
-  expertisesActives: { financier: false, juridique: false, technique: false },
-  phases: buildPhases('passoire', '2026-02-01'),
-  documents: DOCS_BY_TYPE['renovation'],
-  prestataires: [
+    {
+         id: 'proj_7',
+        type: 'passoire',
+        titre: 'Sauvetage passoire — Appartement DPE G, Lyon',
+        adresse: 'Lyon 8e — 69008',
+        objectif: 'Passer de DPE G à DPE C et remettre en location',
+        deadline: '2026-12-01',
+        offre: 'copilot',
+        expertisesActives: { financier: false, juridique: false, technique: false },
+        phases: buildPhases('passoire', '2026-02-01'),
+        documents: DOCS_BY_TYPE['renovation'],
+        prestataires: [
     { id:'p1', nom:'Home in Love', specialite:'Accompagnement immobilier', email:'contact@homeinlove.fr', tel:'+33 1 XX XX XX XX', coutEngage:400, coutPrev:1200, isHIL:true },
   ],
   messages: [],
