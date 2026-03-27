@@ -1082,7 +1082,7 @@ function renderTabProjet() {
 
   /* ── Widget sécurité (3 expertises) ── */
   var santeHtml = '<div class="sante-section"><div class="sante-header"><div class="sante-title">État de Sécurité du Projet</div><div class="sante-subtitle">Mis à jour il y a 2h</div></div><div class="sante-grid">';
-  ['financier','juridique','technique'].forEach(function(key) {
+  ['financier','juridique','technique','administratif'].forEach(function(key) {
     var ex = EXPERTISES[key];
     var active = p.expertisesActives[key];
     santeHtml +=
